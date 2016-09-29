@@ -21,11 +21,4 @@
 		<nature>com.adobe.flexbuilder.project.flexnature</nature>
 		<nature>com.adobe.flexbuilder.project.actionscriptnature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>[source path] src</name>
-			<type>2</type>
-			<location>E:/project/flash/tools/deltax/trunk/Deltax3D/src</location>
-		</link>
-	</linkedResources>
 </projectDescription>
