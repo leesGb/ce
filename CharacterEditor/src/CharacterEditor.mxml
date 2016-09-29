@@ -115,6 +115,12 @@
 				var file:File = new File(File.applicationDirectory.nativePath + "/etc/directory.xml");
 				
 				FileHelper.saveXMLToFile(new XML(tempXmlStr),file);
+				
+				var xml:XML = new XML(tempXmlStr);
+				Enviroment.RootPath = Util.makeGammaString(xml.RootPath);
+				Enviroment.ResourceRootPath = Util.makeGammaString(xml.ResourcePath);
+				Enviroment.ConfigRootPath = Util.makeGammaString(xml.DesignerPath);
+				
 				startGame();
 			}
 			
