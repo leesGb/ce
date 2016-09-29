@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   width="542" height="300" close="closeWindowHandler(event)" title="add ani">
+	<fx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			
+			public var okHandler:Function;
+			
+			protected function closeWindowHandler(event:Event):void
+			{
+				// TODO Auto-generated method stub
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function okClickHandler(evt:Event):void{
+				okHandler();
+				closeWindowHandler(null);
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Button x="99" y="196" label="ok" click="okClickHandler(event)"/>
+	<s:TextInput id="aniName" x="115" y="95" width="297"/>
+	<s:Button x="363" y="196" label="cancel" click="closeWindowHandler(event)"/>
+	<s:Label x="34" y="34" height="27" text="动作名称（需在ans文件相同目录下，指向的动作文件为[ans文件名_动作名称.ani]）"/>
+</s:TitleWindow>

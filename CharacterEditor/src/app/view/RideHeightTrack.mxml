@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="772" height="382" creationComplete="group1_creationCompleteHandler(event)">
+	
+	<fx:Script>
+		<![CDATA[
+			import app.manager.ModelManager;
+			
+			import com.hmh.utils.FileHelper;
+			
+			import deltax.common.math.MathUtl;
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.model.Socket;
+			import deltax.graphic.scenegraph.object.RenderObjLinkType;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			
+			import spark.events.IndexChangeEvent;
+			import spark.events.TextOperationEvent;
+			protected function saveBtn_clickHandler(event:MouseEvent):void
+			{
+				var renderObj:RenderObject = ModelManager.getInstance().renderObject;
+				if(!renderObj || !checkIsMount())return;
+				var file:File = new File(Enviroment.ConfigRootPath+"mountPostion.xml");
+				var fs:FileStream = new FileStream();
+				var resultStr:String="";
+				var str:String="";
+				var isExist:Boolean;
+				var tempStr:String = "";
+				var sss:String;
+				if(file.exists)
+				{
+					fs.open(file,FileMode.READ);
+					var strm:String =fs.readUTFBytes(fs.bytesAvailable); 
+					var xml:XML = XML(strm);
+					for each(var item:XML in xml.item)
+					{
+						tempStr = item.@id;
+						if(tempStr == renderObj.aniGroup.name)
+						{
+							isExist = true;
+							item.@vx = sx.value;
+							item.@vy = sy.value;
+							item.@vz = sz.value;
+						}
+						sss = "<item id='$' vx='$' vy='$' vz='$'/>";
+						sss = sss.replace("$",item.@id).replace("$",item.@vx).replace("$",item.@vy).replace("$",item.@vz);
+						str+=sss;
+					}
+					fs.close();
+				}
+				//
+				if(!isExist)
+				{
+					var index:int = renderObj.aniGroup.name.indexOf("mount");
+					var aniName:String = renderObj.aniGroup.name.substr(index);
+					str+="<item id='$' vx='$' vy='$' vz='$'/>";
+					str = str.replace("$",aniName).replace("$",sx.value).replace("$",sy.value).replace("$",sz.value);
+				}
+				resultStr = "<mount>"+str+"</mount>";
+				FileHelper.saveStringToFile(resultStr,file);
+			}
+			
+			protected function textChangeHandler(event:Event):void
+			{
+				if(ModelManager.getInstance().renderObject == null)return;
+				var renderObj:RenderObject = ModelManager.getInstance().renderObject.getLinkObject("ride_socket",RenderObjLinkType.SOCKET) as RenderObject;
+				if(renderObj == null)return;
+				switch(event.target)
+				{
+					case matx:
+						renderObj.x = Number(matx.text);
+						sx.value = renderObj.x; 
+						break;
+					case maty:
+						renderObj.y = Number(maty.text);
+						sy.value = renderObj.y;
+						break;
+					case matz:
+						renderObj.z = Number(matz.text);
+						sz.value = renderObj.z;
+						break;
+					case sx:
+						renderObj.x = sx.value;
+						matx.text = sx.value+"";
+						break;
+					case sy:
+						renderObj.y = sy.value;
+						maty.text = sy.value+"";
+						break;
+					case sz:
+						renderObj.z = sz.value;
+						matz.text = sz.value+"";
+						break;
+					case stoate:
+						renderObj.rotationY = stoate.value;
+						rotated.text = stoate.value+"";
+						break;
+				}
+			}
+			
+			private function checkIsMount():Boolean
+			{
+				var mRenderObj:RenderObject = ModelManager.getInstance().renderObject;
+				if(!mRenderObj||!mRenderObj.aniGroup||!mRenderObj.aniGroup.loaded || mRenderObj.aniGroup.loadfailed)return false;
+				var socket:deltax.graphic.model.Socket;
+				for (var i:int = 0; i < mRenderObj.aniGroup.m_gammaSkeletals.length; i++ ) 
+				{
+					if(mRenderObj.aniGroup.m_gammaSkeletals[i].m_sockets)
+					{
+						for(var j:int = 0;j<mRenderObj.aniGroup.m_gammaSkeletals[i].m_sockets.length;j++)
+						{
+							socket = mRenderObj.aniGroup.m_gammaSkeletals[i].m_sockets[j];
+							if(socket.m_name == "ride_socket")
+							{
+								return true;	
+							}
+						}
+					}
+				}
+				return false;
+			}
+			
+			protected function ansGroup_changeHandler(event:IndexChangeEvent):void
+			{
+				var object:Object = (ansGroup.selectedItem as Object);
+				if(!object || !checkIsMount())return;
+				//
+				var modelName:String = File(object.data).nativePath;
+				var renderObj:RenderObject = new RenderObject();
+				renderObj.addMesh(modelName);
+				var ansName:String = modelName.replace("mod","ani");
+				ansName = ansName.replace("ams","ans");
+				renderObj.setAniGroupByName(ansName);
+				renderObj.position = MathUtl.EMPTY_VECTOR3D;
+				ModelManager.getInstance().renderObject.addLinkObject(renderObj,"ride_socket",RenderObjLinkType.SOCKET);
+				//
+				var fileList:Array = [];
+				var selectName:String = object.name;
+				selectName = String(selectName.split(".")[0]);
+				var foler:File = new File(Enviroment.ResourceRootPath + "role/ani");
+				var index:int;
+				if(foler.isDirectory)
+				{
+					for each(var maFile:File in foler.getDirectoryListing())
+					{
+						index = maFile.name.indexOf(selectName);
+						if(!maFile.isDirectory && maFile.extension == "ani"&&index>-1)
+						{
+							var obj:Object = new Object();
+							obj.name = maFile.name;
+							obj.nativePath = maFile.nativePath;
+							obj.data = maFile;
+							fileList.push(obj);
+						}
+					}
+				}
+				aniGroup.selectedIndex = -1;
+				aniGroup.dataProvider = null;
+				aniGroup.dataProvider = new ArrayCollection(fileList);
+			}
+			
+			protected function aniGroup_changeHandler(event:IndexChangeEvent):void
+			{
+				if(ModelManager.getInstance().renderObject == null)return;
+				var obj:Object = aniGroup.selectedItem as Object;
+				if(obj == null)return;
+				var nameArr:Array = String(obj.name).split("_");
+				var aniName:String = String(nameArr[nameArr.length-1]).split(".")[0];
+				var renderObj:RenderObject = ModelManager.getInstance().renderObject.getLinkObject("ride_socket",RenderObjLinkType.SOCKET) as RenderObject;
+				if(renderObj)
+				{
+					renderObj.playAni(aniName);
+				}
+			}
+			
+			protected function group1_creationCompleteHandler(event:FlexEvent):void
+			{
+				updateTreeList();
+			}
+			
+			private function updateTreeList():void
+			{
+				var fileList:Array = [];
+				var foler:File = new File(Enviroment.ResourceRootPath + "role/mod");
+				if(foler.isDirectory)
+				{
+					for each(var maFile:File in foler.getDirectoryListing())
+					{
+						if(!maFile.isDirectory && maFile.extension == "ams")
+						{
+							var obj:Object = new Object();
+							obj.name = maFile.name;
+							obj.nativePath = maFile.nativePath;
+							obj.data = maFile;
+							fileList.push(obj);
+						}
+					}
+				}
+				ansGroup.dataProvider = new ArrayCollection(fileList);
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Label x="10" y="25" text="mountx"/>
+	<s:TextInput id="matx" x="55" y="20" change="textChangeHandler(event)" text="0"/>
+	<s:Label x="10" y="75" text="mounty"/>
+	<s:TextInput id="maty" x="55" y="70" change="textChangeHandler(event)" text="0"/>
+	<s:Label x="10" y="124" text="mountz"/>
+	<s:TextInput id="matz" x="55" y="119" change="textChangeHandler(event)" text="0"/>
+	<s:HSlider id="sx" x="10" y="51" width="317" change="textChangeHandler(event)" minimum="-500" maximum="500" value="0"/>
+	<s:HSlider id="sy" x="10" y="101" width="317" change="textChangeHandler(event)" minimum="0" maximum="500" value="0"/>
+	<s:HSlider id="sz" x="10" y="148" width="317" change="textChangeHandler(event)" minimum="-500" maximum="500" value="0"/>
+	<s:Label x="10" y="172" text="rx"/>
+	<s:TextInput id="rotated" x="25" y="167" change="textChangeHandler(event)" text="0" enabled="false"/>
+	<s:HSlider id="stoate" x="10" y="196" width="317" change="textChangeHandler(event)" minimum="-500" maximum="500" value="0" enabled="false"/>
+	<s:ComboBox id="ansGroup" x="11" y="240" change="ansGroup_changeHandler(event)" labelField="name"/>
+	<s:ComboBox id="aniGroup" x="181" y="240" change="aniGroup_changeHandler(event)" labelField="name"/>
+	<s:Button id="saveBtn" x="44" y="289" width="231" height="36" label="save"
+			  click="saveBtn_clickHandler(event)"/>
+</s:Group>

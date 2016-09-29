@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" creationComplete="createTree(event)">
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import app.constant.MainConstant;
+			import app.equipment.DressingRoom;
+			import app.equipment.EquipItemParam;
+			import app.equipment.EquipParams;
+			import app.equipment.Equipment;
+			import app.equipment.EquipmentGroup;
+			import app.equipment.EquipmentPart;
+			import app.equipment.EquipsInUse;
+			import app.manager.ModelManager;
+			
+			import com.hmh.utils.FileHelper;
+			
+			import deltax.common.resource.DependentRes;
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.effect.data.EffectData;
+			import deltax.graphic.effect.data.EffectGroup;
+			import deltax.graphic.manager.ResourceManager;
+			import deltax.graphic.manager.ResourceType;
+			import deltax.graphic.map.MapConstants;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			private var m_equipGroups:Vector.<EquipmentGroup>;
+			private var loadedCnt:int;
+			private var urlRequests:Array;
+			private var urlloaders:Array;
+			private var curEquipment:Equipment;
+			private var curTreeNode:*;
+			private var curEquipmentPart:EquipmentPart;
+			private var curEquipmeshParts:Array;
+			
+			private var curSeleteItem:*;
+			
+			protected function createTree(event:FlexEvent = null):void
+			{
+				m_equipGroups = DressingRoom.Instance.m_equipGroups;
+				if(m_equipGroups == null)
+				{
+					return;	
+				}
+				
+				var str:String = "<root>";
+				var tempArr0:Array;
+				var tempArr1:Array;
+				var tempArr2:Array;
+				var isNpc:Boolean = false;
+				var tempidx:String;
+				
+				tempArr0 = [];
+				for (tempidx in m_equipGroups)
+				{
+					tempArr0.push(tempidx);
+				}
+				tempArr0.sort();
+				for (var i:int = 0;i<tempArr0.length;i++)
+				{
+					var idx:String = tempArr0[i];
+					var groupNameArr:Array = m_equipGroups[idx].name.split("/");
+					var epg:EquipmentGroup = m_equipGroups[idx];
+					var nodeStr:String = "<node label='" + groupNameArr[groupNameArr.length - 1] + "' value='"+idx+"'>";
+					var m_equipmentPackages:Dictionary = epg.m_equipmentPackages;
+					isNpc = true;//(uint(idx) == 0);
+					tempArr1 = [];
+					for (tempidx in m_equipmentPackages)
+					{
+						tempArr1.push(tempidx);
+					}
+					tempArr1.sort();
+					for(var j:int = 0;j<tempArr1.length;j++)
+					{
+						var m_equipmentPackageIdx:String = tempArr1[j];
+						var nodeStrr:String = "<node label='" + m_equipmentPackageIdx + "' value='"+idx + "%m_equipmentPackages%" + m_equipmentPackageIdx +"'>";
+						
+						tempArr2 = [];
+						for (tempidx in m_equipmentPackages[m_equipmentPackageIdx])
+						{
+							if(isNpc)
+							{
+								tempArr2.push({modelId:Equipment(m_equipmentPackages[m_equipmentPackageIdx][tempidx]).modelID,tempidx:tempidx});
+							}else
+							{
+								tempArr2.push(tempidx);
+							}
+						}
+						if(isNpc)
+						{
+							tempArr2.sortOn("modelId");
+						}else
+						{
+							tempArr2.sort();
+						}
+						for(var k:int = 0;k<tempArr2.length;k++)
+						{
+							var childIdx:String = (isNpc?tempArr2[k].tempidx:tempArr2[k]);
+							var nodeStrrr:String = "<node label='" + (isNpc?(Equipment(m_equipmentPackages[m_equipmentPackageIdx][childIdx]).modelID.toString() + ":   "):"")  + childIdx + "' value='"+idx + "%m_equipmentPackages%" + m_equipmentPackageIdx + "%" + childIdx + "'>";
+							nodeStrrr+="</node>";
+							nodeStrr += nodeStrrr;
+						}
+						nodeStrr+="</node>";
+						nodeStr +=nodeStrr;
+					}
+					nodeStr+="</node>";
+					str+=nodeStr;
+				}
+				str +="</root>";
+				
+				treeId.dataProvider = new XML(str);				
+			}
+			
+			protected function treeId_clickHandler(event:MouseEvent):void
+			{
+				if(treeId.selectedItem == null)return;
+				// 
+				var arr:Array = String(treeId.selectedItem.@value).split("%");
+				var selectData:Object = m_equipGroups;
+				for(var i:int = 0;i<arr.length;i++)
+				{
+					selectData = selectData[arr[i]];
+				}
+				
+				if(selectData is Equipment)
+				{
+					setData(selectData as Equipment);
+					
+					preview(selectData as Equipment);
+					
+					curTreeNode = selectData as Equipment;
+					
+				}else if(selectData is Dictionary)
+				{
+					curTreeNode = selectData as Dictionary;
+				}else if(selectData is EquipmentGroup)
+				{
+					curTreeNode = selectData as EquipmentGroup;
+				}
+				
+				curSeleteItem = treeId.selectedItem;
+			}
+			
+			private function setData(ep:Equipment):void
+			{
+				curEquipment = ep;
+				aniGroupFileName.text = ep.aniGroupFileName;
+				effectGroupFileName.text = ep.effectGroupFileName;
+				effectName.text = ep.effectName;
+				figrueID.text = ep.figureID.toString();
+				hideSkin.text = ep.hideSkin.toString();
+				renderFlag.text = ep.renderFlag.toString();
+				scale.text = ep.scale.toString();
+				stateEffectFileName.text = ep.stateEffectFileName;
+				transparency.text = ep.transparency.toString();
+				modelIDTF.text = ep.modelID.toString();
+				curEquipmeshParts = [];
+				for(var i:int = 0;i<ep.meshParts.length;i++)
+				{
+					curEquipmeshParts.push(ep.meshParts[i]);
+				}
+				dataGridId.dataProvider = new ArrayCollection(curEquipmeshParts);
+				
+				setComboxData();
+			}
+			
+			private function dataGridIdSelectChangeHandler(evt:Event):void
+			{
+				var selectItem:EquipmentPart = dataGridId.selectedItem as EquipmentPart;
+				setEquipMeshPart(selectItem);
+			}
+			
+			
+			private function setEquipMeshPart(value:EquipmentPart):void
+			{
+				curEquipmentPart = value;
+				if(value)
+				{
+					pieceClassName.text = value.pieceClassName;
+					meshFileName.text = value.meshFileName;
+					materialIndex.text = value.materialIndex.toString();
+				}else
+				{
+					pieceClassName.text = "";
+					meshFileName.text = "";
+					materialIndex.text = "0";
+				}
+			}
+			
+			protected function addMeshclickHandler(event:MouseEvent):void
+			{
+				if(curEquipmeshParts == null)
+				{
+					Alert.show("curEquipmeshParts is null");
+					return;
+				}
+				
+				var ep:EquipmentPart = new EquipmentPart();
+				curEquipmeshParts.push(ep);
+				dataGridId.dataProvider = new ArrayCollection(curEquipmeshParts);
+			}
+			
+			protected function deleteMeshClickHandler(event:MouseEvent):void
+			{
+				curEquipmeshParts.splice(dataGridId.selectedIndex,1);
+				dataGridId.dataProvider = new ArrayCollection(curEquipmeshParts);
+			}
+			
+			protected function saveMeshclickHandler(event:MouseEvent):void
+			{
+				if(curEquipmentPart == null)
+				{
+					Alert.show("equipmentpart is null");
+					return;
+				}
+					
+				curEquipmentPart.materialIndex = int(materialIndex.text);
+				curEquipmentPart.pieceClassName = pieceClassName.text;
+				curEquipmentPart.meshFileName = meshFileName.text;
+				
+				curEquipment.meshParts = new Vector.<EquipmentPart>();
+				for(var i:int = 0;i<curEquipmeshParts.length;i++)
+				{
+					curEquipment.meshParts.push(curEquipmeshParts[i]);
+				}
+				
+				treeId_clickHandler(null);
+			}
+			
+			private function preview(ep:Equipment):void
+			{
+//				if(ep.meshParts.length == 0)return;
+				
+				var arr:Array = String(treeId.selectedItem.@value).split("%");
+				
+				var equipParams:EquipParams = new EquipParams();
+				for(var i:int = 0,len:int = equipParams.nudeParams.nudePartIDs.length;i<len;i++){
+					equipParams.nudeParams.nudePartIDs[i] = 1;// int((nudeIdTIs[i] as TextInput).text);
+				}
+				equipParams.m_equipItemParams = new Vector.<EquipItemParam>();
+				var equipItemParam:EquipItemParam = new EquipItemParam();
+				equipItemParam.equipName = arr[3];
+				equipItemParam.equipType = arr[2];
+				equipParams.m_equipItemParams.push(equipItemParam);
+				
+				var equipsInUse:EquipsInUse = new EquipsInUse();
+				equipsInUse.type = arr[0];
+//				equipsInUse.work = wordCB.selectedItem.value;
+				equipsInUse.orgFigureWeight = 0.7;
+				equipsInUse.preType = 0;
+				
+				if (equipItemParam.equipType == "weapon") 
+				{
+					ModelManager.getInstance().showEquipPreview(ep,equipsInUse,equipParams);
+				}else
+				{				
+					ModelManager.getInstance().showModelPreview(ep,equipsInUse,equipParams);
+				}
+				
+				equipType.text = equipItemParam.equipType;
+				equipName.text = equipItemParam.equipName;
+			}
+			
+			private function addNewHandler(event:MouseEvent):void
+			{
+				if(curTreeNode is Dictionary)
+				{
+					var newEquipment:Equipment = new Equipment();
+					newEquipment.meshParts = new Vector.<EquipmentPart>();
+					Dictionary(curTreeNode)[nweAddName.text] = newEquipment;
+				}else if(curTreeNode is EquipmentGroup)
+				{
+					EquipmentGroup(curTreeNode).m_equipmentPackages[nweAddName.text] = new Dictionary();
+				}
+				
+				//
+				createTree();
+			}
+			
+			private function saveTreeHandler(event:MouseEvent):void
+			{
+				saveTree();
+			}
+			
+			public function saveTree():void
+			{
+				var equipGroup:EquipmentGroup;
+				for(var idx:String in m_equipGroups)
+				{
+					equipGroup = m_equipGroups[idx];
+					//0:meshFileName,1:aniGroupFileName,2:effectGroupFileName,3:decorateSetTextureName
+					var vec0:Vector.<String> = new Vector.<String>();
+					var vec1:Vector.<String> = new Vector.<String>();
+					var vec2:Vector.<String> = new Vector.<String>();
+					var vec3:Vector.<String> = new Vector.<String>();
+					
+					for(var i:String in equipGroup.m_equipmentPackages)
+					{
+						for(var ii:String in equipGroup.m_equipmentPackages[i])
+						{
+							var equipMent:Equipment = equipGroup.m_equipmentPackages[i][ii];
+							for each(var equipmesh:EquipmentPart in equipMent.meshParts)
+							{
+								if(equipmesh.meshFileName == null)equipmesh.meshFileName = "";
+								
+								if(vec0.indexOf(equipmesh.meshFileName) == -1)
+								{
+									vec0.push(equipmesh.meshFileName);
+								}
+							}
+							if(equipMent.aniGroupFileName == null)equipMent.aniGroupFileName = "";
+							if(vec1.indexOf(equipMent.aniGroupFileName) == -1)
+							{
+								vec1.push(equipMent.aniGroupFileName);
+							}
+							if(equipMent.effectGroupFileName == null)equipMent.effectGroupFileName = "";
+							if(vec2.indexOf(equipMent.effectGroupFileName) == -1)
+							{
+								vec2.push(equipMent.effectGroupFileName);
+							}
+						}
+					}
+					for(var j:String in equipGroup.m_decorateSet)
+					{
+						for(var jj:String in equipGroup.m_decorateSet[j])
+						{
+							for each(var jjj:String in equipGroup.m_decorateSet[j][jj])
+							{
+								if(vec3.indexOf(vec3) == -1)
+								{
+									vec3.push(jjj);
+								}
+							}	
+						}
+					}
+					if(equipGroup.m_dependantResList == null)
+					{
+						equipGroup.m_dependantResList = new Vector.<DependentRes>();
+						var depentRes:DependentRes;
+						for(var k:uint = 0;k<4;k++)
+						{
+							depentRes = new DependentRes();
+							equipGroup.m_dependantResList[k] = depentRes;
+						}
+					}
+					equipGroup.m_dependantResList[0].m_resFileNames = vec0;
+					equipGroup.m_dependantResList[1].m_resFileNames = vec1;
+					equipGroup.m_dependantResList[2].m_resFileNames = vec2;
+					equipGroup.m_dependantResList[3].m_resFileNames = vec3;
+					
+					var groupNameArr:Array = m_equipGroups[idx].name.split("/");
+					
+					var data:ByteArray = new ByteArray();
+					data.endian = Endian.LITTLE_ENDIAN;
+					equipGroup.write(data);
+					FileHelper.saveByteArrayToFile(data,(Enviroment.ResourceRootPath + "/dress/" + groupNameArr[groupNameArr.length - 1]));
+				}
+			}
+			
+			private function deleteTreeHandler(event:MouseEvent):void
+			{
+				var arr:Array = String(treeId.selectedItem.@value).split("%");
+				var parentData:Object = m_equipGroups;
+				for(var i:int = 0;i<arr.length - 1;i++)
+				{
+					parentData = parentData[arr[i]];
+				}
+				
+				switch(arr.length)
+				{
+					case 3:
+						delete parentData[arr[i]];						
+						break;
+					case 4:
+						delete parentData[arr[i]];
+						break;
+				}
+				createTree();
+			}
+			
+			private function closeWindow(evt:CloseEvent):void
+			{
+				mWin.removeEventListener(CloseEvent.CLOSE,closeWindow);
+				MainConstant.app.removeElement(mWin);
+				mWin = null;
+			}
+			
+			private var mWin:ModelFilesListView;
+			protected function openModelFilesHandler(event:MouseEvent):void
+			{
+				if(mWin == null)
+				{
+					mWin = new ModelFilesListView();
+					MainConstant.app.addElement(mWin);
+					mWin.x = MainConstant.app.width - mWin.width >>1;
+					mWin.y = MainConstant.app.height - mWin.height >>1;
+					mWin.addEventListener(CloseEvent.CLOSE,closeWindow);
+				}
+				
+				mWin.callBack = function(pGName:String,pCName:String):void
+				{
+					meshFileName.text = pGName;
+					pieceClassName.text = pCName;
+					
+					saveMeshclickHandler(null);
+				};
+				
+				mWin.preView = function(pGName:String,pCName:String):void
+				{
+					if(curEquipment == null || curEquipmentPart == null)
+					{
+						Alert.show("equipmentpart is null");
+						return;
+					}
+					curEquipmentPart.materialIndex = 0;
+					curEquipmentPart.pieceClassName = pCName;
+					curEquipmentPart.meshFileName = pGName;
+					
+					curEquipment.meshParts = new Vector.<EquipmentPart>();
+					for(var i:int = 0;i<curEquipmeshParts.length;i++)
+					{
+						curEquipment.meshParts.push(curEquipmeshParts[i]);
+					}
+					
+					preview(curEquipment);
+				}
+					
+					
+			}
+			
+			protected function changeHandler(event:MouseEvent):void
+			{
+				if(curEquipment == null || treeId.selectedItem==null)
+				{
+					Alert.show("没选中");
+					return;
+				}
+				
+				var isChange:Boolean;
+				var btn:* = event.target;
+				switch(btn)
+				{
+					case btn_id:
+						changeModelIDHandler();
+						break;
+					case btn_name:
+						changeEquipNameHandler();
+						break;
+					case btn_ans:
+						openAnsGroup();
+						break;
+					case btn_effs:
+						onEffectOpen();
+						break;
+					case btn_figureID:
+						curEquipment.figureID = uint(figrueID.text);
+						break;
+					case btn_hide:
+						curEquipment.hideSkin = hideSkin.text == "true"?true:false;
+						break;
+					case btn_render:
+						curEquipment.renderFlag = uint(renderFlag.text);
+						break;
+					case btn_scale:
+						isChange = true;
+						var sv:Number = Number(scale.text);
+						if(sv<=0)
+						{
+							sv = 0.1;
+						}
+						curEquipment.scale = sv;
+						break;
+					case btn_state_eff:
+						curEquipment.stateEffectFileName = stateEffectFileName.text;
+						break;
+					case btn_trans:
+						curEquipment.transparency = Number(transparency.text);
+						break;
+				}
+				
+				if(isChange)
+				{
+					preview(curEquipment);
+				}
+			}
+			
+			private function openAnsGroup():void
+			{
+				var file:File = new File(Enviroment.ResourceRootPath);
+				file.addEventListener(Event.SELECT, selectAniGroupFileHandler);
+				file.browseForOpen("导入骨骼文件", [new FileFilter("ans","*.ans")]);	
+			}
+			
+			private function selectAniGroupFileHandler(event:Event):void
+			{
+				var f:File = event.currentTarget as File;
+				if(f)
+				{
+					var arr:Array = f.nativePath.split("\\");
+					var idx:int = arr.indexOf("data");
+					var arr2:Array = arr.slice(idx+1);
+					var path:String = arr2.join("/");
+					aniGroupFileName.text = path;
+					curEquipment.aniGroupFileName = path;
+					//
+					preview(curEquipment);
+				}
+			}
+			
+			private function onEffectOpen():void
+			{
+				var file:File = new File(Enviroment.ResourceRootPath+"fx/cfg/");
+				file.addEventListener(Event.SELECT, selectEffectGroupFileHandler);
+				file.browseForOpen("导入特效组文件", [new FileFilter("eft","*.eft")]);
+			}
+			
+			private function selectEffectGroupFileHandler(event:Event):void
+			{
+				var f:File = event.currentTarget as File;
+				if(f)
+				{
+					var arr:Array = f.nativePath.split("\\");
+					var idx:int = arr.indexOf("fx");
+					var arr2:Array = arr.slice(idx);
+					var path:String = arr2.join("/");
+					effectGroupFileName.text = path;
+					curEquipment.effectGroupFileName = path;
+					
+					setComboxData();
+				}
+			}
+			
+			private function setComboxData():void
+			{
+				btn_eff_name.dataProvider=null;
+				if(curEquipment && curEquipment.effectGroupFileName)
+				{
+					var path:String = Enviroment.ResourceRootPath+curEquipment.effectGroupFileName;
+					ResourceManager.instance.getResource(path, ResourceType.EFFECT_GROUP, onEffectGroupLoad,EffectGroup);
+				}
+			}
+			
+			private function onEffectGroupLoad(resource:EffectGroup,isSuccess:Boolean):void
+			{
+				if(!isSuccess)
+				{
+					resource.release();
+				}
+				
+				var arr:Array=[""];
+				for each(var effectData:EffectData in resource.m_effectDatas)
+				{
+					arr.push(effectData.fullName);
+				}
+				
+				var list:ArrayCollection = new ArrayCollection(arr);
+				btn_eff_name.dataProvider = list;
+			}
+			
+			protected function changeModelIDHandler():void
+			{
+				var oldModelID:uint = curEquipment.modelID;
+				var newModelID:uint = uint(modelIDTF.text);
+				var arr:Array = String(treeId.selectedItem.@value).split("%");
+				
+				var modelIDs:Dictionary = DressingRoom.Instance.m_equipGroups[arr[0]].m_modelIDs;
+				if(modelIDs[newModelID])
+				{
+					Alert.show("已经存在id");
+					modelIDTF.text = oldModelID.toString();
+					return;
+				}
+				
+				delete modelIDs[oldModelID];
+				modelIDs[newModelID] = curEquipment;
+				curEquipment.modelID = newModelID;
+				treeId.selectedItem.@label = newModelID + ":   " + arr[3];
+			}
+			
+			protected function changeEquipNameHandler():void
+			{
+				var arr:Array = String(treeId.selectedItem.@value).split("%");
+				var oldName:String = arr[3];
+				var newName:String = equipName.text;
+				var dicTemp:Dictionary = m_equipGroups[arr[0]].m_equipmentPackages[arr[2]];
+				if(dicTemp[newName])
+				{
+					Alert.show("已经存在此名称");
+					equipName.text = oldName;
+					return;
+				}
+				dicTemp[newName] = dicTemp[oldName];
+				delete dicTemp[oldName];
+//				createTree();	
+				treeId.selectedItem.@label = curEquipment.modelID + ":   " + newName;
+			}
+			
+			private function comboxChangeHandler(evt:Event):void
+			{
+				effectName.text = btn_eff_name.selectedItem as String;
+				curEquipment.effectName = effectName.text;
+				preview(curEquipment);
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<mx:Tree id="treeId" x="6" y="31" width="235" height="451" labelField="@label" dataTipField="@value" showRoot="false" click="treeId_clickHandler(event)"></mx:Tree>
+	<s:TextInput id="nweAddName" x="6" y="2" width="62" height="25"/>
+	<s:Button x="189" y="2" width="52" height="25" label="save" click="saveTreeHandler(event)"/>
+	<s:Button x="122" y="2" width="64" height="25" label="delete" click="deleteTreeHandler(event)"/>
+	<s:Button x="71" y="2" width="47" height="25" label="add" click="addNewHandler(event)"/>
+	
+	<s:BorderContainer x="246" y="0" width="533" height="483">
+		<s:Label x="18" y="265" text="动作组路径："/>
+		<s:Label x="18" y="291" text="特效组路径："/>
+		<s:Label x="30" y="315" text="特效名字："/>
+		<s:Label x="42" y="340" text="标识ID："/>
+		<s:Label x="30" y="364" text="隐藏皮肤："/>
+		<s:Label x="30" y="387" text="渲染标识："/>
+		<s:Label x="30" y="411" text="缩放因子："/>
+		<s:Label x="5" y="434" text="状态特效路径："/>
+		<s:Label x="18" y="458" text="父类透明度："/>
+		<s:TextInput id="aniGroupFileName" x="87" y="261" width="240" enabled="false"/>
+		<s:TextInput id="effectGroupFileName" x="87" y="285" width="240" enabled="false"/>
+		<s:TextInput id="effectName" x="87" y="309" width="240" enabled="false"/>
+		<s:TextInput id="figrueID" x="87" y="333" width="240"/>
+		<s:TextInput id="hideSkin" x="87" y="357" width="240"/>
+		<s:TextInput id="renderFlag" x="87" y="381" width="240"/>
+		<s:TextInput id="scale" x="87" y="405" width="240"/>
+		<s:TextInput id="stateEffectFileName" x="87" y="429" width="240"/>
+		<s:TextInput id="transparency" x="87" y="453" width="240"/>
+		<s:DataGrid id="dataGridId" x="87" y="78" width="167" height="155"
+					requestedRowCount="4"
+					selectionChange="dataGridIdSelectChangeHandler(event)">
+			<s:columns>
+				<s:ArrayList>
+					<s:GridColumn dataField="pieceClassName" headerText="meshParts"></s:GridColumn>
+				</s:ArrayList>
+			</s:columns>
+		</s:DataGrid>
+		<s:Label x="30" y="78" text="网格列表："/>
+		<s:Label x="264" y="97" text="pieceClassName"/>
+		<s:Label x="264" y="146" text="meshFileName"/>
+		<s:Label x="265" y="193" text="materialIndex"/>
+		<s:TextInput id="pieceClassName" x="264" y="116" width="140"/>
+		<s:TextInput id="meshFileName" x="263" y="165" width="141"/>
+		<s:TextInput id="materialIndex" x="263" y="210" width="141"/>
+		<s:Label x="54" y="30" text="类型："/>
+		<s:Label x="54" y="54" text="名字："/>
+		<s:TextInput id="equipType" x="87" y="26" width="240" enabled="false"/>
+		<s:TextInput id="equipName" x="87" y="50" width="240"/>
+		<s:Label x="42" y="7" text="模型ID："/>
+		<s:TextInput id="modelIDTF" x="87" y="2" width="240"/>
+		<s:Button x="93" y="234" label="add mesh" click="addMeshclickHandler(event)"/>
+		<s:Button x="176" y="234" label="del mesh" click="deleteMeshClickHandler(event)"/>
+		<s:Button x="412" y="116" width="37" label="..." click="openModelFilesHandler(event)"/>
+		
+		<s:Button id="btn_name" x="334" y="51" width="116" label="ok" click="changeHandler(event)"/>
+		<s:Button id="btn_id" x="334" y="3" width="116" label="ok" click="changeHandler(event)"/>
+		<s:Button id="btn_ans" x="334" y="262" width="116" label="..." click="changeHandler(event)"/>
+		<s:Button x="334" y="286" width="116" label="..." click="changeHandler(event)" id="btn_effs"/>
+		<s:Button x="334" y="334" width="116" label="ok" click="changeHandler(event)" id="btn_figureID"/>
+		<s:Button x="334" y="357" width="116" label="ok" click="changeHandler(event)" id="btn_hide"/>
+		<s:Button x="334" y="382" width="116" label="ok" click="changeHandler(event)" id="btn_render"/>
+		<s:Button x="334" y="405" width="116" label="ok" click="changeHandler(event)" id="btn_scale"/>
+		<s:Button x="334" y="429" width="116" label="ok" click="changeHandler(event)" id="btn_state_eff"/>
+		<s:Button x="334" y="453" width="116" label="ok" click="changeHandler(event)" id="btn_trans"/>
+		<s:ComboBox id="btn_eff_name" x="334" y="309" width="116" height="23" change="comboxChangeHandler(event)"/>
+	</s:BorderContainer>
+	
+</s:Group>

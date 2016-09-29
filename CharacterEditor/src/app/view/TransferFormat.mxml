@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300">
+	
+	<fx:Script>
+		<![CDATA[
+			import app.constant.MainConstant;
+			
+			import app.manager.ModelManager;
+			
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.model.PieceGroup;
+			protected function importMesh_clickHandler(event:MouseEvent):void
+			{
+				var file:File = new File(Enviroment.RootPath+"md5/");
+				file.addEventListener(Event.SELECT, selectModelFileHandler);
+				file.browseForOpen("导入模型文件", [new FileFilter("md5Mesh;mesh","*.md5Mesh;*.mesh")]);
+			}
+			
+			private function selectModelFileHandler(evt:Event):void 
+			{
+				var file:File = evt.currentTarget as File;
+				if (file) 
+				{
+					if(file.nativePath.toLocaleLowerCase().indexOf(".md5mesh") != -1)
+					{
+						ModelManager.getInstance().importMd5Mesh(file);
+					}
+				}
+			}
+			
+			protected function transferAni_clickHandler(event:MouseEvent):void
+			{
+				var file:File = new File(Enviroment.RootPath+"md5/");
+				file.addEventListener(FileListEvent.SELECT_MULTIPLE, selectAnimlFileHandler);
+				file.browseForOpenMultiple("导入md5动作文件", [new FileFilter("md5anim","*.md5anim")]);		
+			}
+			
+			private function selectAnimlFileHandler(evt:FileListEvent):void 
+			{
+				File(evt.currentTarget).removeEventListener(FileListEvent.SELECT_MULTIPLE, selectAnimlFileHandler);
+				var list:Array = evt.files;
+				var file:File = evt.currentTarget as File;
+				ModelManager.getInstance().saveAniPath="";
+				if (list && list.length>0) 
+				{
+					for each(var tf:File in list)
+					{
+						ModelManager.getInstance().saveAniList.push(tf);
+					}
+				}
+				ModelManager.getInstance().multiSaveAni();
+			}
+			
+			protected function exportAmsAndAns_clickHandler(event:MouseEvent):void
+			{
+				ModelManager.getInstance().exportModelSkeletonFromMd5(MainConstant.mainView.pieceGroupDg.selectedItem as PieceGroup);
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Button id="importMesh" x="6" y="35" width="100" height="35" label="导入mesh" toolTip="导入美术打包好的md5mesh文件"
+			  click="importMesh_clickHandler(event)"/>
+	<s:Button id="exportAmsAndAns" x="6" y="87" width="225" height="35" label="导出ams@ans" toolTip="导出程序用的模型数据与骨骼动画包，这里的骨骼包是包括所有的动画"
+			  click="exportAmsAndAns_clickHandler(event)"/>
+	<s:Button id="transferAni" x="131" y="35" width="100" height="35" label="转换动作" toolTip="导入美术打包好的md5anim文件，就可以转换成程序用的ani格式"
+			  click="transferAni_clickHandler(event)"/>
+</s:Group>

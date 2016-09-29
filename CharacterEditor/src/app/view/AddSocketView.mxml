@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   width="400" height="300" close="titlewindow1_closeHandler(event)" title="add socket">
+	<fx:Script>
+		<![CDATA[
+			import deltax.graphic.model.AnimationGroup;
+			import deltax.graphic.model.Skeletal;
+			import deltax.graphic.model.Socket;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			private var _aniGroup:AnimationGroup;
+			public var okCallBack:Function;
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				// TODO Auto-generated method stub
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function okClickHandler(event:MouseEvent):void{
+				var socket:deltax.graphic.model.Socket = new deltax.graphic.model.Socket();
+				socket.m_name = socketName.text;
+				socket.m_skeletonIdx = skeltonCB.selectedIndex;
+				socket.m_matrix = new Matrix3D();
+				
+				if(_aniGroup.m_gammaSkeletals[socket.m_skeletonIdx].m_sockets == null)
+					_aniGroup.m_gammaSkeletals[socket.m_skeletonIdx].m_sockets = new Vector.<deltax.graphic.model.Socket>()
+				_aniGroup.m_gammaSkeletals[socket.m_skeletonIdx].m_sockets.push(socket);
+						
+				okCallBack();
+				titlewindow1_closeHandler(null);
+			}
+			
+			public function set aniGroup(value:AnimationGroup):void{
+				this._aniGroup = value;
+				
+				var arr:Array = [];
+				for each(var skeleton:Skeletal in this._aniGroup.m_gammaSkeletals){
+					arr.push(skeleton);
+				}
+					
+				skeltonCB.dataProvider = new ArrayCollection(arr);
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Label x="10" y="17" text="Name"/>
+	<s:Label x="10" y="49" text="skeleton name"/>
+	<s:TextInput id="socketName" x="58" y="10"/>
+	<s:Button x="163" y="169" label="add" click="okClickHandler(event)"/>
+	<s:ComboBox id="skeltonCB" x="101" y="49" labelField="m_name"/>
+</s:TitleWindow>

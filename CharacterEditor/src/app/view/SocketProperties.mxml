@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   width="566" height="344" title="Socket Properties" close="titlewindow1_closeHandler(event)" creationComplete="titlewindow1_creationCompleteHandler(event)">
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import app.manager.ModelManager;
+			
+			import deltax.common.math.Quaternion;
+			import deltax.graphic.model.Socket;
+			import deltax.graphic.scenegraph.object.RenderObjLinkType;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			import app.equipment.DressingRoom;
+			import app.equipment.EquipClassType;
+			import app.equipment.EquipItemInUse;
+			import app.equipment.Equipment;
+			import app.equipment.EquipmentGroup;
+			private var _info:deltax.graphic.model.Socket;
+			
+			public function set socketInfo(value:deltax.graphic.model.Socket):void{
+				this._info = value;
+				updateData();
+			}
+			public function get socketInfo():deltax.graphic.model.Socket{
+				return this._info;
+			}
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				// TODO Auto-generated method stub
+				PopUpManager.removePopUp(this);
+			}			
+			
+			private function updateData():void{
+				if(socketInfo == null)return;
+				this.socketName.text = socketInfo.m_name;
+				this.skeletonName.text = ModelManager.getInstance().renderObject.aniGroup.m_gammaSkeletals[socketInfo.m_skeletonIdx].m_name;
+					
+				var matrix:Matrix3D = socketInfo.m_matrix;
+				var orientaion:Quaternion = new Quaternion();
+				orientaion.fromMatrix(matrix);
+				var eulerangle:Vector3D = new Vector3D();
+				orientaion.toEulerAngles(eulerangle);
+				this.oX.textDisplay.text = eulerangle.x.toString();
+				this.oY.textDisplay.text = eulerangle.y.toString();
+				this.oZ.textDisplay.text = eulerangle.z.toString();
+				
+				var postionVec:Vector3D = matrix.position;
+				this.pX.textDisplay.text = postionVec.x.toString();
+				this.pY.textDisplay.text = postionVec.y.toString();
+				this.pZ.textDisplay.text = postionVec.z.toString();
+				
+				if(ModelManager.getInstance().m_equipsInUse){
+					for(var idx:String in ModelManager.getInstance().m_equipsInUse.equipedItems){
+						if(idx.replace("weapon","") == this.socketInfo.m_name){
+							var equipedItem:EquipItemInUse  = ModelManager.getInstance().m_equipsInUse.equipedItems[idx];
+							weaponlId.text = equipedItem.equipName;
+							break;
+						}
+					}
+				}
+				//
+				sx2.value = socketInfo.wScale;
+			}
+			
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				var eulerangle:Vector3D = new Vector3D();
+				var orientaion:Quaternion = new Quaternion();
+				orientaion.fromEulerAngles(Number(this.oX.textDisplay.text),Number(this.oY.textDisplay.text),Number(this.oZ.textDisplay.text));
+				var postionVec:Vector3D = new Vector3D(Number(this.pX.textDisplay.text),Number(this.pY.textDisplay.text),Number(this.pZ.textDisplay.text));
+				var matrix:Matrix3D = new Matrix3D();
+				matrix = orientaion.toMatrix3D();
+				matrix.appendTranslation(postionVec.x,postionVec.y,postionVec.z);
+				socketInfo.m_matrix.copyRawDataFrom(matrix.rawData);
+			}
+			
+			protected function button2_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				button1_clickHandler(event);
+				titlewindow1_closeHandler(null);
+			}
+			
+			protected function button3_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				titlewindow1_closeHandler(null);
+			}
+			
+			private var equipListView:EquipListView;
+			private var equipMent:Equipment;
+			private function showAttackListHandler(evt:MouseEvent):void{
+				equipListView = PopUpManager.createPopUp(this,EquipListView,true) as EquipListView;
+				PopUpManager.centerPopUp(equipListView);
+				equipListView.addEventListener(EquipListView.SELECT_WEAPON,__selectWeaponToAttachHandler);
+			}
+			
+			private function __selectWeaponToAttachHandler(evt:Event):void{
+				equipListView.removeEventListener(EquipListView.SELECT_WEAPON,__selectWeaponToAttachHandler);
+				if(equipListView.curWeaonName == "")
+					ModelManager.getInstance().putOffAttach(socketName.text);
+				else
+				{
+					ModelManager.getInstance().attachment(equipListView.curWeaonName,equipListView.curEquipment,socketName.text,0);
+				}
+				weaponlId.text = equipListView.curWeaonName;
+			}
+			
+			protected function o_changeHandler(event:Event):void
+			{
+				button1_clickHandler(null);
+			}
+			
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				updateData();
+			}
+			
+			protected function cleanAttachHandler(event:MouseEvent):void
+			{
+				ModelManager.getInstance().putOffAttach(socketName.text);
+			}
+			
+			private function o_changeHandler1(event:Event):void
+			{
+				if(ModelManager.getInstance().renderObject)
+				{
+					var linkObj:RenderObject = ModelManager.getInstance().renderObject.getLinkObject(socketName.text,RenderObjLinkType.SOCKET) as RenderObject;
+					if(linkObj&&equipListView.curWeaonName)
+					{
+						var equipGroupClass:* = EquipClassType.WEAPON;
+						var equipGroupWeapon:EquipmentGroup= DressingRoom.Instance.m_equipGroups[equipGroupClass];
+						var equipConfigInfo:Equipment= equipGroupWeapon.getEquipment("weapon", equipListView.curWeaonName);
+						var s:Number = sx2.value+equipConfigInfo.scale - 1;
+						s = (s<=0)?0.1:s;
+						linkObj.scaleX = linkObj.scaleY = linkObj.scaleZ = s;
+						socketInfo.wScale = sx2.value;	
+					}
+				}
+			}
+			
+		]]>
+	</fx:Script>
+		
+	<s:Label x="10" y="10" text="Name"/>
+	<s:Label x="10" y="42" text="骨骼名"/>
+	<s:Label x="10" y="113" text="旋转"/>
+	<s:Label x="10" y="64" text="位移"/>
+	<s:Label x="12" y="163" text="缩放"/>
+	<s:TextInput id="socketName" x="58" y="3"/>
+	<s:TextInput id="skeletonName" x="105" y="37" enabled="false"/>
+	<s:Button x="452" y="10" label="Apply" click="button1_clickHandler(event)"/>
+	<s:Button x="452" y="54" label="OK" click="button2_clickHandler(event)"/>
+	<s:Button x="452" y="89" label="Cancel" click="button3_clickHandler(event)"/>
+	<s:TextInput x="76" y="264" width="255"  id="weaponlId"/>
+	<s:Label x="6" y="268" text="Attachment"/>
+	<s:Button x="336" y="264" width="31" label="b" click="showAttackListHandler(event)"/>
+	<s:NumericStepper id="oX" x="15" y="127" width="114" change="o_changeHandler(event)"
+					  maximum="3.14" minimum="-3.14" stepSize="0.01"/>
+	<s:NumericStepper id="oY" x="137" y="127" width="137" change="o_changeHandler(event)"
+					  maximum="3.14" minimum="-3.14" stepSize="0.01"/>
+	<s:NumericStepper id="oZ" x="282" y="127" width="128" change="o_changeHandler(event)"
+					  maximum="3.14" minimum="-3.14" stepSize="0.01"/>
+	<s:NumericStepper id="pX" x="13" y="78" width="114" change="o_changeHandler(event)"
+					  maximum="500" minimum="-500" stepSize="1"/>
+	<s:NumericStepper id="pY" x="135" y="78" width="137" change="o_changeHandler(event)"
+					  maximum="500" minimum="-500" stepSize="1"/>
+	<s:NumericStepper id="pZ" x="280" y="78" width="128" change="o_changeHandler(event)"
+					  maximum="500" minimum="-500" stepSize="1"/>
+	<s:NumericStepper id="sX" x="15" y="179" width="114" change="o_changeHandler(event)"
+					  maximum="5" minimum="0" stepSize="0.1"/>
+	<s:NumericStepper id="sx2" x="15" y="231" width="114" change="o_changeHandler1(event)"
+					  maximum="5" minimum="0.1" stepSize="0.1" value="1"/>
+	<s:NumericStepper id="sY" x="137" y="179" width="137" change="o_changeHandler(event)"
+					  maximum="5" minimum="0" stepSize="0.1"/>
+	<s:NumericStepper id="sZ" x="282" y="179" width="128" change="o_changeHandler(event)"
+					  maximum="5" minimum="0" stepSize="0.1"/>
+	<s:Button x="375" y="264" label="&lt;--clean" click="cleanAttachHandler(event)"/>
+	<s:Label x="15" y="212" text="挂点武器缩放"/>
+</s:TitleWindow>

@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:s="library://ns.adobe.com/flex/spark"
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 width="610" initialize="titlewindow1_initializeHandler(event)">
+	<fx:Script>
+		<![CDATA[
+			import app.constant.MainConstant;
+			
+			import app.manager.ModelManager;
+			import com.hmh.utils.FileHelper;
+			
+			import deltax.appframe.BaseApplication;
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.manager.IResource;
+			import deltax.graphic.manager.ResourceManager;
+			import deltax.graphic.manager.ResourceType;
+			import deltax.graphic.material.Material;
+			import deltax.graphic.material.SkinnedMeshMaterial;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			import deltax.graphic.scenegraph.object.SubMesh;
+			
+			import flash.display3D.Context3DBlendFactor;
+			import flash.display3D.Context3DTriangleFace;
+			import flash.utils.setTimeout;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.RadioButtonGroup;
+			import spark.events.TextOperationEvent;
+			
+			private var fileList:Array;
+			private var curFile:File;
+			private var curMaterial:Material;
+			
+			[Bindable]
+			private var m_cullModeRG:RadioButtonGroup = new RadioButtonGroup();
+			[Bindable]
+			private var m_techniqueNameRG:RadioButtonGroup = new RadioButtonGroup();
+			
+			private var createMatView:CreateMaterialView;
+			
+			public static const BLENDFACTOR_STRINGS:Array = ["", Context3DBlendFactor.ZERO, Context3DBlendFactor.ONE, Context3DBlendFactor.SOURCE_COLOR, Context3DBlendFactor.ONE_MINUS_SOURCE_COLOR, Context3DBlendFactor.SOURCE_ALPHA, Context3DBlendFactor.ONE_MINUS_SOURCE_ALPHA, Context3DBlendFactor.DESTINATION_ALPHA, Context3DBlendFactor.ONE_MINUS_DESTINATION_ALPHA, Context3DBlendFactor.DESTINATION_COLOR, Context3DBlendFactor.ONE_MINUS_DESTINATION_COLOR];
+			protected function titlewindow1_initializeHandler(event:Event):void
+			{
+				updateTreeList();
+				
+				m_srcBlendFunc.dataProvider = new ArrayCollection(BLENDFACTOR_STRINGS);
+				m_destBlendFunc.dataProvider = new ArrayCollection(BLENDFACTOR_STRINGS);
+				//
+				ModelManager.getInstance().addEventListener(ModelManager.CHANGE_MODEL,changeModelHandler);
+			}
+			
+			private function updateTreeList():void
+			{
+				fileList = [];
+				var aaa:String = Enviroment.ResourceRootPath;
+				var foler:File = new File(Enviroment.ResourceRootPath + "mat");
+				if(foler.isDirectory)
+				{
+					for each(var maFile:File in foler.getDirectoryListing())
+					{
+						if(!maFile.isDirectory && maFile.extension == "mtr")
+						{
+							var obj:Object = new Object();
+							obj.name = maFile.name;
+							obj.nativePath = maFile.nativePath;
+							obj.data = maFile;
+							fileList.push(obj);
+						}
+					}
+				}
+				treeId.dataProvider = new ArrayCollection(fileList);
+			}
+			
+			
+			private function treeId_clickHandler(event:MouseEvent):void
+			{
+				if(treeId.selectedItem == null)return;
+				curFile = treeId.selectedItem.data as File;
+				ResourceManager.instance.getResource(curFile.nativePath, ResourceType.MATERIAL, onMaterialLoad);
+			}
+			
+			private function onMaterialLoad(ma:IResource, b:Boolean):void{
+				if (!b)
+				{
+					ma.release();
+					return;
+				}
+				curMaterial = Material(ma);
+				updateData(curMaterial);
+				//
+				preview_clickHandler();
+			}
+			
+			private function updateData(material:Material):void
+			{
+				m_techniqueNameRG.selectedValue = material.m_techniqueName;
+				m_alphaBlendEnable.selected = material.m_alphaBlendEnable;
+				m_srcBlendFunc.selectedIndex = material.m_srcBlendFunc;
+				m_destBlendFunc.selectedIndex = material.m_destBlendFunc;
+				m_alphaTestEnable.selected = material.m_alphaTestEnable;
+				m_alphaTestFunc.text = material.m_alphaTestFunc.toString();
+				m_alphaRef.text = (material.m_alphaRef/0xFF).toString();
+				m_zTestEnable.selected = material.m_zTestEnable;
+				m_zWriteEnable.selected = material.m_zWriteEnable;
+				m_zTestFunc.text = material.m_zTestFunc.toString();//
+				m_cullModeRG.selectedValue = material.m_cullMode;
+				m_fillMode.text = material.m_fillMode.toString();//
+				m_diffuseColor.text = "0x" + material.m_diffuseColor.toString(16);
+				m_ambientColor.text = "0x" + material.m_ambientColor.toString(16);
+				m_specularColor.text = "0x" + material.m_specularColor.toString(16);
+				m_emissiveColor.text = "0x" + material.m_emissiveColor.toString(16);
+				m_specularPower.text = material.m_specularPower.toString();//
+				m_fogMaterial.text = material.m_fogMaterial.toString();//
+			}
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function materialChange(type:uint = 0):void
+			{
+				var material:Material = curMaterial;
+				material.m_techniqueName = String(m_techniqueNameRG.selectedValue);
+				material.m_alphaBlendEnable = m_alphaBlendEnable.selected;
+				material.m_srcBlendFunc = m_srcBlendFunc.selectedIndex;
+				material.m_destBlendFunc = m_destBlendFunc.selectedIndex;
+				material.m_alphaTestEnable = m_alphaTestEnable.selected;
+				material.m_alphaTestFunc = uint(m_alphaTestFunc.text);
+				material.m_alphaRef = uint(Number(m_alphaRef.text) * 0xFF);
+				material.m_zTestEnable = m_zTestEnable.selected;
+				material.m_zWriteEnable = m_zWriteEnable.selected;
+				material.m_zTestFunc = uint(m_zTestFunc.text);
+				material.m_cullMode = uint(m_cullModeRG.selectedValue);
+				material.m_fillMode = uint(m_fillMode.text);
+				material.m_diffuseColor = parseInt(m_diffuseColor.text);
+				material.m_ambientColor = parseInt(m_ambientColor.text);
+				material.m_specularColor = parseInt(m_specularColor.text);
+				material.m_emissiveColor = parseInt(m_emissiveColor.text);
+				material.m_specularPower = Number(m_specularPower.text);
+				material.m_fogMaterial = uint(m_fogMaterial.text);
+				//
+				if(type!=0)
+				{
+					preview_clickHandler();	
+				}
+			}
+			
+			private function saveMaterialHandler():void
+			{
+				materialChange();
+				var data:ByteArray = new ByteArray();
+				data.endian = Endian.LITTLE_ENDIAN;
+				curMaterial.write(data);
+				FileHelper.saveByteArrayToFile(data,curFile.nativePath);
+			}
+			
+			private function createMatCallBack(createView:CreateMaterialView,type:uint):void
+			{
+				if(type == 1)
+				{
+					var material:Material = new Material();
+					material.m_techniqueName = String(createView.radiogroup1.selectedValue);
+					material.m_alphaBlendEnable = false;
+					material.m_srcBlendFunc = 4;
+					material.m_destBlendFunc = 5;
+					material.m_alphaTestEnable = true;
+					material.m_alphaTestFunc = 5;
+					material.m_alphaRef = uint(0.7686274509803922 * 0xFF);
+					material.m_zTestEnable = true;
+					material.m_zWriteEnable = true;
+					material.m_zTestFunc = 4;
+					material.m_cullMode = 0;
+					material.m_fillMode = 3;
+					material.m_diffuseColor = parseInt("0xffffffff");
+					material.m_ambientColor = parseInt("0xffffffff");
+					material.m_specularColor = parseInt("0xff2d2d2d");
+					material.m_emissiveColor = parseInt("0xffa6a6a6");
+					material.m_specularPower = 0;
+					material.m_fogMaterial = 0;
+					
+					var data:ByteArray = new ByteArray();
+					data.endian = Endian.LITTLE_ENDIAN;
+					material.write(data);
+					var path:String = Enviroment.ResourceRootPath+"mat/"+createView.matName.text+".mtr";
+					FileHelper.saveByteArrayToFile(data,path);
+					//
+					setTimeout(updateTreeList,200);
+				}
+				PopUpManager.removePopUp(createMatView);
+			}
+			
+			protected function create_clickHandler(event:MouseEvent):void
+			{
+				if(createMatView == null)
+				{
+					createMatView = new CreateMaterialView();
+					createMatView.callBack = createMatCallBack;
+				}
+				createMatView.init();
+				var win:CharacterEditor = MainConstant.app;
+				createMatView.x = win.width - createMatView.width>>1;
+				createMatView.y = win.height - createMatView.height>>1;
+				PopUpManager.addPopUp(createMatView,win,true);
+			}
+			
+			protected function preview_clickHandler(event:MouseEvent=null):void
+			{
+				if(curFile == null || curMaterial == null)
+				{
+					return;
+				}
+				var renderObj:RenderObject = ModelManager.getInstance().renderObject;
+				var name:String=Enviroment.ResourceRootPath+"test/mod/test1.ams";
+				if(renderObj)
+				{
+					changeSceneRenderObj(renderObj,curMaterial);
+				}else
+				{
+					ModelManager.getInstance().importAmsMesh(name);
+				}
+			}
+			
+			private function changeModelHandler(evt:Event):void
+			{
+				setTimeout(delayChangeModel,1000);
+			}
+			
+			private function delayChangeModel():void
+			{
+				var renderObj:RenderObject = ModelManager.getInstance().renderObject;
+				changeSceneRenderObj(renderObj,curMaterial);
+			}
+			
+			private function changeSceneRenderObj(renderObj:RenderObject,material:Material):void
+			{
+				var subMeshList:Vector.<SubMesh>;
+				var len:uint;
+				var i:uint;
+				var subMesh:SubMesh;
+				for each (subMeshList in renderObj.addedNamedSubMeshes) 
+				{
+					len = subMeshList.length;
+					i = 0;
+					for(;i<len;i++)
+					{
+						subMesh = subMeshList[i];
+						SkinnedMeshMaterial(subMesh.material).onMaterialLoad(material,true);
+					}
+				}
+			}
+			
+			protected function import_clickHandler(event:MouseEvent):void
+			{
+				var file:File = new File(Enviroment.ResourceRootPath);
+				file.addEventListener(Event.SELECT, __selectBmsModelFileHandler);
+				file.browseForOpen("导入模型文件", [new FileFilter("bms;ams","*.bms;*.ams")]);
+			}
+			
+			protected function __selectBmsModelFileHandler(event:Event):void
+			{
+				var file:File = event.currentTarget as File;
+				if (file) 
+				{
+					ModelManager.getInstance().importAmsMesh(file.nativePath);
+					//
+					var path:String = file.nativePath;
+					path= path.replace("mod","ani");
+					path = path.replace("ams","ans");
+					var ansFile:File = new File(path);
+					if(ansFile.exists)
+					{
+						ModelManager.getInstance().importAniGroupHandler(ansFile);
+					}
+				}
+			}
+			
+			protected function m_diffuseColor_changeHandler(event:Event):void
+			{
+				materialChange(1);
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	
+	<mx:Tree id="treeId" x="2" y="0" width="239" height="490" labelField="name" dataTipField="nativePath" showDataTips="true" showRoot="false" click="treeId_clickHandler(event)"></mx:Tree>
+	<s:Label x="265" y="68" text="m_techniqueName"/>
+	<s:Label x="265" y="94" text="m_srcBlendFunc"/>
+	<s:Label x="265" y="124" text="m_destBlendFunc"/>
+	<s:Label x="265" y="149" text="m_alphaTestFunc"/>
+	<s:TextInput id="m_alphaTestFunc" x="387" y="144" width="213" enabled="false"/>
+	<s:Label x="265" y="178" text="m_alphaRef"/>
+	<s:TextInput id="m_alphaRef" x="387" y="171" width="212" change="m_diffuseColor_changeHandler(event)"/>
+	<s:Label x="265" y="253" text="m_zTestFunc"/>
+	<s:TextInput id="m_zTestFunc" x="387" y="247" width="212" enabled="false"/>
+	<s:Label x="265" y="276" text="m_cullMode"/>
+	<s:Label x="265" y="305" text="m_fillMode"/>
+	<s:TextInput id="m_fillMode" x="387" y="298" width="212" enabled="false"/>
+	<s:Label x="265" y="331" text="m_diffuseColor"/>
+	<s:TextInput id="m_diffuseColor" x="387" y="325" width="212" change="m_diffuseColor_changeHandler(event)"/>
+	<s:Label x="265" y="358" text="m_ambientColor"/>
+	<s:TextInput id="m_ambientColor" x="387" y="352" width="212" change="m_diffuseColor_changeHandler(event)"/>
+	<s:Label x="265" y="384" text="m_specularColor"/>
+	<s:TextInput id="m_specularColor" x="387" y="378" width="212" change="m_diffuseColor_changeHandler(event)"/>
+	<s:Label x="265" y="410" text="m_emissiveColor"/>
+	<s:TextInput id="m_emissiveColor" x="387" y="405" width="212" change="m_diffuseColor_changeHandler(event)"/>
+	<s:Label x="265" y="437" text="m_specularPower"/>
+	<s:TextInput id="m_specularPower" x="387" y="432" width="212" enabled="false"/>
+	<s:Label x="265" y="467" text="m_fogMaterial"/>
+	<s:TextInput id="m_fogMaterial" x="387" y="459" width="212" enabled="false"/>
+	<s:RadioButton x="387" y="272" label="NONE" value="1" group="{m_cullModeRG}" change="m_diffuseColor_changeHandler(event)"/>
+	<s:RadioButton x="451" y="272" label="FRONT" value="2" group="{m_cullModeRG}" change="m_diffuseColor_changeHandler(event)"/>
+	<s:RadioButton x="519" y="272" label="BACK"  value="3" group="{m_cullModeRG}" change="m_diffuseColor_changeHandler(event)"/>
+	<s:ComboBox id="m_srcBlendFunc" x="387" y="87" width="213" change="m_diffuseColor_changeHandler(event)"/>
+	<s:ComboBox id="m_destBlendFunc" x="387" y="117" width="213" change="m_diffuseColor_changeHandler(event)"/>
+	<s:RadioButton x="434" y="64" label="高光反射" value="SpecularTexture" group="{m_techniqueNameRG}" change="m_diffuseColor_changeHandler(event)"/>
+	<s:RadioButton x="503" y="64" label="自发光" value="DefaultEmissive" group="{m_techniqueNameRG}" change="m_diffuseColor_changeHandler(event)"/>
+	<s:RadioButton x="558" y="64" label="阴影" value="shadow" group="{m_techniqueNameRG}" change="m_diffuseColor_changeHandler(event)"/>
+	<s:RadioButton x="388" y="64" label="默认" value="Default" group="{m_techniqueNameRG}" change="m_diffuseColor_changeHandler(event)"/>	
+	<s:Button x="266" y="4" label="save" click="saveMaterialHandler()"/>
+	<s:CheckBox id="m_alphaBlendEnable" x="264" y="198" label="m_alphaBlendEnable" change="m_diffuseColor_changeHandler(event)"/>
+	<s:CheckBox id="m_alphaTestEnable" x="415" y="198" label="m_alphaTestEnable" enabled="false"/>
+	<s:CheckBox id="m_zTestEnable" x="264" y="218" label="m_zTestEnable" change="m_diffuseColor_changeHandler(event)"/>
+	<s:CheckBox id="m_zWriteEnable" x="415" y="218" label="m_zWriteEnable" change="m_diffuseColor_changeHandler(event)"/>
+	<s:Button x="345" y="4" label="create" click="create_clickHandler(event)"/>
+	<s:Button x="425" y="4" label="preview" click="preview_clickHandler(event)"/>
+	<s:Button x="266" y="31" width="101" height="30" label="导入其他模型" click="import_clickHandler(event)"/>
+	<s:TextInput x="375" y="31" width="222" height="31"/>
+	<!--<s:Scroller x="0" y="0" width="100%" height="100%">
+		<s:VGroup width="100%" height="100%">
+			<s:BorderContainer  id="container" width="100%" height="600" borderVisible="false">
+				
+			</s:BorderContainer>
+		</s:VGroup>
+	</s:Scroller>-->
+	
+</s:Group>

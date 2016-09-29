@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300">
+	
+	<fx:Script>
+		<![CDATA[
+			import app.constant.MainConstant;
+			
+			import app.manager.ModelManager;
+			
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.model.PieceGroup;
+			
+			import flash.utils.setTimeout;
+			
+			protected function importAms_clickHandler(event:MouseEvent):void
+			{
+				var file:File = new File(Enviroment.ResourceRootPath);
+				file.addEventListener(Event.SELECT, selectBmsModelFileHandler);
+				file.browseForOpen("导入模型文件", [new FileFilter("bms;ams","*.bms;*.ams")]);
+			}
+			
+			protected function selectBmsModelFileHandler(event:Event):void
+			{
+				var file:File = event.currentTarget as File;
+				if (file) 
+				{
+					ModelManager.getInstance().importAmsMesh(file.nativePath);
+					//
+					var path:String = file.nativePath;
+					path= path.replace("mod","ani");
+					path = path.replace("ams","ans");
+					var ansFile:File = new File(path);
+					if(ansFile.exists)
+					{
+						ModelManager.getInstance().importAniGroupHandler(ansFile);
+					}
+				}
+			}
+			
+			protected function saveAms_clickHandler(event:MouseEvent):void
+			{
+				ModelManager.getInstance().saveAmsMesh(MainConstant.mainView.pieceGroupDg.selectedItem as PieceGroup);
+			}
+			
+			protected function resetNormal_clickHandler(event:MouseEvent):void
+			{
+				ModelManager.getInstance().reBuildNormal(MainConstant.mainView.pieceGroupDg.selectedItem as PieceGroup);
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Button id="importAms" x="14" y="43" width="100" height="35" label="导入ams"
+			  click="importAms_clickHandler(event)"/>
+	<s:Button id="saveAms" x="140" y="43" width="100" height="35" label="保存ams"
+			  click="saveAms_clickHandler(event)"/>
+	<s:Button id="resetNormal" x="14" y="95" width="226" height="35" label="重新计算法线" enabled="false"
+			  click="resetNormal_clickHandler(event)"/>
+</s:Group>

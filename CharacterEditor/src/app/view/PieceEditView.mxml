@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="652" height="648" close="titlewindow1_closeHandler(event)">
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import app.manager.ModelManager;
+			
+			import deltax.common.resource.Enviroment;
+			import deltax.delta;
+			import deltax.graphic.material.SkinnedMeshMaterial;
+			import deltax.graphic.model.HPieceGroup;
+			import deltax.graphic.model.Piece;
+			import deltax.graphic.model.PieceGroup;
+			import deltax.graphic.model.PieceMaterialInfo;
+			import deltax.graphic.scenegraph.object.SubMesh;
+			
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.RadioButtonGroup;
+			import spark.events.TextOperationEvent;
+			
+			private var _info:Piece;
+			private var cells:Vector.<MaterialPropertiesView>;
+			
+			[Bindable]
+			private var pieceTypeRadio:RadioButtonGroup = new RadioButtonGroup();
+			
+			public function set info(value:Piece):void
+			{
+				this._info = value;
+				cells = new Vector.<MaterialPropertiesView>();
+				updateData();
+			}
+			public function get info():Piece{
+				return this._info;
+			}
+			
+			private function updateData():void{
+				if(info.m_orgOffset == null || info.m_curOffset == null)return;
+				
+				m_orgOffset_x.text = info.m_orgOffset.x.toString();
+				m_orgOffset_y.text = info.m_orgOffset.y.toString();
+				m_orgOffset_z.text = info.m_orgOffset.z.toString();
+				m_orgScale_x.text = info.m_orgScale.x.toString();
+				m_orgScale_y.text = info.m_orgScale.y.toString();
+				m_orgScale_z.text = info.m_orgScale.z.toString();
+				
+				m_curOffset_x.text = info.m_curOffset.x.toString();
+				m_curOffset_y.text = info.m_curOffset.y.toString();
+				m_curOffset_z.text = info.m_curOffset.z.toString();
+				m_curScale_x.text = info.m_curScale.x.toString();
+				m_curScale_y.text = info.m_curScale.y.toString();
+				m_curScale_z.text = info.m_curScale.z.toString();
+				
+				m_texScale.text = info.m_texScale.toString();				
+				
+				pieceTypeRadio.selectedValue = info.Type;
+				
+				contentId.removeAllElements();
+				cells.splice(0,cells.length);
+				
+				var i:int = 0;
+				for each(var pm:PieceMaterialInfo in Vector.<PieceMaterialInfo>(info.delta::m_materialInfos))
+				{
+					var matView:MaterialPropertiesView = new MaterialPropertiesView();
+					matView.deleteCallBack = deleteCallBack;
+					matView.idx.text = (i++).toString();
+					matView.matId.text = info.m_pieceClass.m_pieceGroup.m_dependMaterials.m_resFileNames[pm.m_baseMatIndex];
+					matView.texId.text = "";
+					if(pm.m_texIndiceGroups.length>1)
+						trace("aa");
+					for each(var texVec:Vector.<uint> in pm.m_texIndiceGroups)
+					{
+						for each(var textureId:int in texVec)
+						{
+							if(textureId>=0 && textureId<info.m_pieceClass.m_pieceGroup.m_dependTextures.m_resFileNames.length)
+								matView.texId.text += info.m_pieceClass.m_pieceGroup.m_dependTextures.m_resFileNames[textureId] + "\n";
+							else
+								matView.texId.text += "null" + "\n";
+						}
+					}
+					matView.texId.text = matView.texId.text.substr(0,matView.texId.text.length-1);
+					
+					cells.push(matView);
+					contentId.addElement(matView);
+				}
+				
+				if(info.m_pieceClass.m_pieceGroup is HPieceGroup){
+					md5MaterialName.text = HPieceGroup(info.m_pieceClass.m_pieceGroup).meshParser.subGeometrys[info.m_pieceClass.m_index].materialName;
+				}else{
+					md5MaterialName.text = "";					
+				}
+			}
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				// TODO Auto-generated method stub
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function deleteCallBack(cur:MaterialPropertiesView):void{
+				var idx:int = cells.indexOf(cur);
+				cells.splice(idx,1);
+				contentId.removeElementAt(idx);
+				for(;idx< cells.length;idx++){
+					var mat:MaterialPropertiesView = cells[idx];
+					mat.idx.text = (int(mat.idx.text) - 1).toString();
+				}
+			}
+			
+			private function okClickHandler(event:MouseEvent):void
+			{
+				info.m_orgOffset.x = Number(m_orgOffset_x.text);
+				info.m_orgOffset.y = Number(m_orgOffset_y.text);
+				info.m_orgOffset.z = Number(m_orgOffset_z.text);
+				info.m_orgScale.x = Number(m_orgScale_x.text);
+				info.m_orgScale.y = Number(m_orgScale_y.text);
+				info.m_orgScale.z = Number(m_orgScale_z.text);
+
+				info.m_curOffset.x = Number(m_curOffset_x.text);
+				info.m_curOffset.y = Number(m_curOffset_y.text);
+				info.m_curOffset.z = Number(m_curOffset_z.text);
+				info.m_curScale.x = Number(m_curScale_x.text);
+				info.m_curScale.y = Number(m_curScale_y.text);
+				info.m_curScale.z = Number(m_curScale_z.text);				
+				
+				info.m_texScale = Number(m_texScale.text);
+				
+				info.m_pieceFlag = pieceTypeRadio.selectedValue as int;
+				
+				var isReloadMaterial:Boolean;
+				var isReloadTexture:Boolean;
+				
+				var vec:Vector.<PieceMaterialInfo> = Vector.<PieceMaterialInfo>(info.delta::m_materialInfos);
+				if(vec.length <cells.length)
+				{
+					vec.length = cells.length;
+				}
+				var i:int = 0;
+				var pieceGroup:PieceGroup = info.m_pieceClass.m_pieceGroup;
+				for each(var mat:MaterialPropertiesView in cells)
+				{
+					if(vec[i] == null)
+					{
+						vec[i] = new PieceMaterialInfo();
+					}
+					var matIdx:int = pieceGroup.dependMaterials.m_resFileNames.indexOf(mat.matId.text);
+					if(matIdx == -1)
+					{
+						pieceGroup.dependMaterials.m_resFileNames.push(mat.matId.text);
+						matIdx = pieceGroup.dependMaterials.m_resFileNames.length-1;
+					}
+					
+					vec[i].m_baseMatIndex = matIdx;
+					vec[i].m_texIndiceGroups = new Vector.<Vector.<uint>>();
+					var vvvTemp:Vector.<uint> = new Vector.<uint>();					
+					var texIdArr:Array = mat.texId.text.split("\n");
+					for(var jj:int = 0;jj<texIdArr.length;jj++)
+					{
+						var texIdx:int = pieceGroup.dependTextures.m_resFileNames.indexOf(texIdArr[jj]);
+						if(texIdx == -1)
+						{
+							pieceGroup.dependTextures.m_resFileNames.push(texIdArr[jj]);
+							texIdx = pieceGroup.dependTextures.m_resFileNames.length - 1;
+						}
+						vvvTemp.push(texIdx);
+
+					}
+					vec[i].m_texIndiceGroups.push(vvvTemp);					
+					i++;
+				}
+				titlewindow1_closeHandler(null);
+				
+				ModelManager.getInstance().renderObject.invalidBoundsForSelect();
+				//
+				var pieceName:String = info.m_pieceClass.m_name;
+				var pieceClassIndex:int = ModelManager.getInstance().renderObject.getPieceClassIndex(pieceName);
+				var subMesh:SubMesh = ModelManager.getInstance().renderObject.getPiece(pieceClassIndex,0);
+				if(subMesh && mat)
+				{
+					SkinnedMeshMaterial(subMesh.material).reload(mat.matId.text);
+					var name:String = texIdArr[0];
+					if(name)
+					{
+						name = Enviroment.ResourceRootPath+name;
+						SkinnedMeshMaterial(subMesh.material).mainPass.resetApplyTexture(name);	
+					}
+				}
+			}
+			
+			
+			protected function addMatrialClickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				var matView:MaterialPropertiesView = new MaterialPropertiesView();
+				matView.deleteCallBack = deleteCallBack;
+				matView.idx.text = (cells.length).toString();
+				matView.matId.text = "mat/不透明单面.mtr";//无混合全透高c4
+				matView.texId.text = "null";
+				cells.push(matView);
+				contentId.addElement(matView);
+			}
+			
+			protected function changeHandler(event:TextOperationEvent):void
+			{
+				
+			}
+			
+			/* protected function resetOffsetScaleHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				info.autoSetOrgOffsetScale();
+				updateData();
+			} */
+			
+		]]>
+	</fx:Script>
+	<s:Button x="290" y="584" label="ok" click="okClickHandler(event)"/>
+	<s:Scroller x="226" y="60" width="419" height="480">
+		<s:VGroup id="contentId" width="100%" height="100%">
+		</s:VGroup>
+	</s:Scroller>
+	<s:Button x="226" y="548" label="add" click="addMatrialClickHandler(event)"/>
+	<s:Label x="227" y="47" text="material"/>
+	<s:Label x="226" y="10" text="pieceType"/>
+	<s:RadioButton x="242" y="21" label="eVT_SampleVertex" group="{pieceTypeRadio}" value="0"/>
+	<s:RadioButton x="372" y="21" label="eVT_SkeletalVertex" group="{pieceTypeRadio}" value="1"/>
+	<s:RadioButton x="500" y="21" label="eVT_SoftClothVertex" group="{pieceTypeRadio}" value="2"/>
+	<s:Label x="10" y="21" text="m_orgOffset"/>
+	<s:TextInput id="m_orgOffset_x" x="10" y="41" width="68" change="changeHandler(event)" enabled="false"/>
+	<s:TextInput id="m_orgOffset_y" x="82" y="41" width="68" change="changeHandler(event)" enabled="false"/>
+	<s:TextInput id="m_orgOffset_z" x="152" y="41" width="68" change="changeHandler(event)" enabled="false"/>
+	<s:Label x="10" y="76" text="m_orgScale"/>
+	<s:TextInput id="m_orgScale_x" x="10" y="96" width="68" change="changeHandler(event)" enabled="false"/>
+	<s:TextInput id="m_orgScale_y" x="82" y="96" width="68" change="changeHandler(event)" enabled="false"/>
+	<s:TextInput id="m_orgScale_z" x="152" y="96" width="68" change="changeHandler(event)" enabled="false"/>
+	<s:Label x="13" y="279" text="m_texScale"/>
+	<s:TextInput id="m_texScale" x="13" y="299" width="208" change="changeHandler(event)" enabled="false"/>
+	<s:Label x="10" y="136" text="m_curOffset"/>
+	<s:TextInput id="m_curOffset_x" x="10" y="156" width="68" change="changeHandler(event)"/>
+	<s:TextInput id="m_curOffset_y" x="82" y="156" width="68" change="changeHandler(event)"/>
+	<s:TextInput id="m_curOffset_z" x="152" y="156" width="68" change="changeHandler(event)"/>
+	<s:Label x="10" y="191" text="m_curScale"/>
+	<s:TextInput id="m_curScale_x" x="10" y="211" width="68" change="changeHandler(event)"/>
+	<s:TextInput id="m_curScale_y" x="82" y="211" width="68" change="changeHandler(event)"/>
+	<s:TextInput id="m_curScale_z" x="152" y="211" width="68" change="changeHandler(event)"/>
+	<!--<s:Button x="98" y="12" label="reset" click="resetOffsetScaleHandler(event)"/>-->
+	<s:TextInput id="md5MaterialName" x="13" y="344" height="21" editable="false"/>
+</s:TitleWindow>

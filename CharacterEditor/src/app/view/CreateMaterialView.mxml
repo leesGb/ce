@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="364" height="242" backgroundColor="#cccccc">
+	
+	<fx:Script>
+		<![CDATA[
+			
+			public var callBack:Function;
+			
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				callBack(this,0);
+			}
+			
+			protected function button2_clickHandler(event:MouseEvent):void
+			{
+				callBack(this,1);
+			}
+			
+			public function init():void
+			{
+				if(matName)
+				{
+					matName.text ="";
+				}
+				//
+				if(radiogroup1)
+				{
+					radiogroup1.selectedValue = "默认";
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<s:RadioButtonGroup id="radiogroup1"/>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Label x="10" y="45" fontSize="15" text="名字"/>
+	<s:TextInput id="matName" x="48" y="37" width="247" height="31"/>
+	<s:Label x="10" y="87" fontSize="15" text="材质用途"/>
+	<s:VGroup x="80" y="84">
+		<s:RadioButton label="默认" groupName="radiogroup1"/>
+		<s:RadioButton label="高光反射" groupName="radiogroup1"/>
+		<s:RadioButton label="自发光" groupName="radiogroup1"/>
+		<s:RadioButton label="阴影" groupName="radiogroup1"/>
+	</s:VGroup>
+	<s:Button x="68" y="200" label="确定" click="button2_clickHandler(event)"/>
+	<s:Button x="208" y="200" label="取消" click="button1_clickHandler(event)"/>
+	<s:Label x="135" y="8" text="材质创建面板"/>
+</s:BorderContainer>

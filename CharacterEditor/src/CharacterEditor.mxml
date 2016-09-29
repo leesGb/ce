@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx" backgroundAlpha="0"
+					   backgroundColor="#A1A1A1" mouseEnabled="false" xmlns:view="app.view.*" minWidth="800" minHeight="600"
+					   addedToStage="addToStageEvent(event)" 
+					   creationComplete="init()"
+					   showStatusBar="false">
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import app.Game;
+			import app.config.AppConfig;
+			import app.constant.MainConstant;
+			import app.manager.ModelManager;
+			import app.update.AppUpdater;
+			
+			import com.hmh.utils.FileHelper;
+			
+			import deltax.common.Util;
+			import deltax.common.control.EventHandler;
+			import deltax.common.log.LogEvent;
+			import deltax.common.resource.Enviroment;
+			import deltax.gui.component.event.DXWndMouseEvent;
+			
+			import flash.utils.clearTimeout;
+			import flash.utils.setTimeout;
+			
+			import mx.core.UIComponent;
+			import mx.events.IndexChangedEvent;
+			import mx.events.ResizeEvent;
+			
+			private var delayId:uint;
+			private var nudeIdTIs:Array;
+			
+			private var _updater:AppUpdater;
+			private var _appConfig:AppConfig;
+			private var game:Game;
+			
+			private var _errorID:Dictionary=new Dictionary();
+			
+			public var defaultDirectoryXML:XML = 
+				<directory_config  Language='CN' LanguageDir='language' readInPackage='1' >	
+					<!--路径都是相对于swf所在目录-->
+					<!-- 资源根目录，也就是程序启动完成后的工作路径 -->
+					<RootPath>$1/</RootPath>
+					<ResourcePath>$1/assets/data/</ResourcePath>
+					<!--策划配置目录（打包或非打包）-->
+					<DesignerPath>$1/assets/config/</DesignerPath>
+				</directory_config>;
+			
+			private function addToStageEvent(event:Event):void
+			{
+				loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, uncaughtErrorHandler);
+				
+				stage.addEventListener(TextEvent.TEXT_INPUT, this.processEvent);
+				stage.addEventListener(DXWndMouseEvent.DOUBLE_CLICK, this.processEvent);
+				stage.addEventListener(DXWndMouseEvent.MOUSE_DOWN, this.processEvent);
+				stage.addEventListener(DXWndMouseEvent.MOUSE_UP, this.processEvent);
+				stage.addEventListener(DXWndMouseEvent.MIDDLE_MOUSE_DOWN, this.processEvent);
+				stage.addEventListener(DXWndMouseEvent.MIDDLE_MOUSE_UP, this.processEvent);
+				stage.addEventListener(DXWndMouseEvent.RIGHT_MOUSE_DOWN, this.processEvent);
+				stage.addEventListener(DXWndMouseEvent.RIGHT_MOUSE_UP, this.processEvent);				
+				stage.addEventListener(DXWndMouseEvent.MOUSE_WHEEL, this.processEvent);
+				stage.addEventListener(KeyboardEvent.KEY_DOWN, this.processEvent);
+				stage.addEventListener(KeyboardEvent.KEY_UP, this.processEvent);
+				stage.addEventListener(Event.SELECT_ALL, this.processEvent);
+				stage.addEventListener(Event.COPY, this.processEvent);
+				stage.addEventListener(Event.PASTE, this.processEvent);
+				stage.addEventListener(Event.CUT, this.processEvent);
+			}
+			
+			private function init():void
+			{
+				this.maximize();
+				MainConstant.mainView = mainView;
+				MainConstant.app = this;
+				delayId = setTimeout(delayShowFile,500);
+			}
+			
+			private function delayShowFile():void
+			{
+				clearTimeout(delayId);
+				//检查更新应用程序
+				_appConfig = new AppConfig();	
+				_appConfig.loadConfig("app:/AppConfig.xml");
+				_updater = new AppUpdater(this, _appConfig);
+				_updater.checkUpdate();	
+				//
+				var file:File;
+				if(!FileHelper.isFileExist("app:/etc/directory.xml"))
+				{
+					file = new File();
+					file.addEventListener(Event.SELECT,selectDefaultDirectoryHandler);
+					file.browseForDirectory("选择工作目录");
+				}else
+				{
+					var xml:XML = FileHelper.readFileToXML("app:/etc/directory.xml");
+					if(xml)
+					{
+						Enviroment.RootPath = Util.makeGammaString(xml.RootPath);
+						Enviroment.ResourceRootPath = Util.makeGammaString(xml.ResourcePath);
+						Enviroment.ConfigRootPath = Util.makeGammaString(xml.DesignerPath);
+					}
+					
+					startGame();
+				}
+			}
+			
+			protected function selectDefaultDirectoryHandler(event:Event):void
+			{
+				var tempXmlStr:String = defaultDirectoryXML.toString().replace(/\$1/g,String(event.currentTarget.nativePath).replace(/\\/g,"/"));
+				var file:File = new File(File.applicationDirectory.nativePath + "/etc/directory.xml");
+				
+				FileHelper.saveXMLToFile(new XML(tempXmlStr),file);
+				startGame();
+			}
+			
+			private function startGame():void
+			{
+//				var ui:UIComponent = new UIComponent();
+//				ui.mouseEnabled = false;
+				game = new Game(viewContainer);
+//				ui.addChild(game);
+//				viewContainer.addElement(ui);
+				
+				ModelManager.getInstance().importCoordAms();
+			}
+			
+			private function processEvent(e:Event):void
+			{
+				if(e.type.indexOf("mouse")!=-1)
+				{
+					var re:Rectangle = viewContainer.getRect(stage);
+					if(!re.contains(stage.mouseX,stage.mouseY))
+					{
+						e.stopImmediatePropagation();
+					}
+				}
+			}	
+			
+			private function uncaughtErrorHandler(evt:UncaughtErrorEvent) : void
+			{
+				 evt.preventDefault();
+				 
+				if(evt.error is Error)
+				{
+					if(this._errorID[evt.error.errorID] == undefined || getTimer() - this._errorID[evt.error.errorID] > 250)
+					{
+						EventHandler.instance.dispatchEvent(new LogEvent(Error(evt.error).getStackTrace(),LogEvent.ERROR));
+					}
+					this._errorID[evt.error.errorID] = getTimer();
+				}
+				else if(evt.error is ErrorEvent)
+				{
+					EventHandler.instance..dispatchEvent(new LogEvent(ErrorEvent(evt.error).text,LogEvent.ERROR));
+				}
+				else
+				{
+					EventHandler.instance..dispatchEvent(new LogEvent(evt.error.toString(),LogEvent.ERROR));
+				}
+			}
+			
+//			protected function viewContainer_resizeHandler(event:ResizeEvent):void
+//			{
+//				if(game)
+//				{
+//					game.width = viewContainer.width;
+//					game.height = viewContainer.height;
+//				}
+//			}
+			
+		]]>
+	</fx:Script>
+	<mx:DividedBox width="100%" height="100%" direction="horizontal" horizontalGap="2">
+		
+		<mx:VDividedBox id="h1" width="70%" height="100%" verticalGap="2">
+			<s:BorderContainer id="viewContainer" x="0" y="0" width="100%" height="100%" minWidth="300" minHeight="300"/>
+			<s:BorderContainer width="100%" height="300">
+				<view:ModelTimelineView id="modelTimelineVIew" width="100%" height="100%"/>
+			</s:BorderContainer>
+		</mx:VDividedBox>
+		
+		<s:Scroller height="100%" width="746" maxWidth="746" minWidth="200">
+			<s:Group width="100%" height="100%">
+				<s:BorderContainer width="746" height="1200">
+					<s:VGroup width="100%" height="100%" gap="8">
+						<view:MainView id="mainView" width="100%" height="468"/>
+						
+						<mx:TabNavigator id="mainTabNavigator" width="100%" height="100%">
+							<s:NavigatorContent width="100%" height="100%" label="格式转换">
+								<view:TransferFormat id="transferFormat" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="模型编辑">
+								<view:AmsHandlerView id="amsHandlerView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="动作编辑">
+								<view:AniHandlerView id="aniHandlerView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="材质编辑">
+								<view:MaterialListView id="materialView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="装备定义">
+								<view:EquipGroupView id="equipGroupView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="动作连播">
+								<view:ContectActionView id="contectActionView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="坐骑调试">
+								<view:RideHeightTrack id="contentRideInfoView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="格式转换">
+								<view:AllFormatTransfer id="contentFormatInfoView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+						</mx:TabNavigator>
+						
+					</s:VGroup>
+				</s:BorderContainer>
+			</s:Group>
+		</s:Scroller>
+	</mx:DividedBox>
+	
+</s:WindowedApplication>

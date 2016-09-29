@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="300"
+		 creationComplete="group1_creationCompleteHandler(event)"		 >
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import app.Game;
+			import app.constant.MainConstant;
+			import app.manager.ModelManager;
+			
+			import deltax.common.control.EventHandler;
+			import deltax.common.log.LogEvent;
+			import deltax.graphic.animation.EnhanceSkeletonAnimator;
+			import deltax.graphic.model.AniGroupLoadHandler;
+			import deltax.graphic.model.AniSequenceHeaderInfo;
+			import deltax.graphic.model.Animation;
+			import deltax.graphic.model.AnimationGroup;
+			import deltax.graphic.model.FrameString;
+			import deltax.graphic.scenegraph.object.ObjectContainer3D;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			
+			import mx.collections.ArrayCollection;
+			import mx.core.UIComponent;
+			import mx.events.FlexEvent;
+			import mx.events.IndexChangedEvent;
+			
+			import spark.events.IndexChangeEvent;
+			
+			public static var instance:ModelTimelineView;
+			
+			public static const fsArrr:Array = ["null",FrameString.FS_HIT];
+			
+			private var _info:RenderObject;
+			private var m_animation:Animation;
+			private var m_frameStrings:Vector.<FrameString>;
+			private var m_curFrame:int = -1;
+			public var mainView:MainView;
+			private var aniGroupLoader:ModelAniGroupLoader;
+			private var m_showAni:String;
+			private var timeContent:UIComponent;
+			private var dragBtn:UIComponent;
+			private var isDrag:Boolean;
+			
+			private var errorText:String="";
+			
+			protected function group1_creationCompleteHandler(event:FlexEvent):void
+			{
+				instance = this;
+				timeContent = new UIComponent();
+//				timeContent.graphics.lineStyle(1,0xcccccc);
+				timeContent.graphics.beginFill(0x878789);
+				timeContent.graphics.drawRect(0,0,1000,50);
+				timeContent.graphics.endFill();
+				timeContent.x = 0;
+				timeContent.y = 0;
+				
+				dragBtn = new UIComponent();
+				dragBtn.buttonMode = true;
+				dragBtn.graphics.beginFill(0x000000);
+				dragBtn.graphics.drawRect(0,0,10,20);
+				dragBtn.graphics.endFill();
+				dragBtn.x = 0;
+				dragBtn.y = 30;
+				timeContent.addChild(dragBtn);
+				
+				contentId.addElement(timeContent);
+
+				
+				
+				fsCB.dataProvider = new ArrayCollection(fsArrr);
+				
+				addEvents();
+			}
+			
+			private function addEvents():void{
+				dragBtn.addEventListener(MouseEvent.MOUSE_DOWN,mouseDownHandler);
+				timeContent.addEventListener(MouseEvent.MOUSE_MOVE,mouseMoveHandler);
+				dragBtn.addEventListener(MouseEvent.MOUSE_UP,mouseUpHandler);
+				
+				EventHandler.instance.addEventListener(LogEvent.LOG_EVENT,this.logEvent);
+			}
+			
+			protected function mouseDownHandler(event:MouseEvent):void
+			{
+				if(m_animation == null)
+				{
+					return;
+				}
+				dragBtn.startDrag(false,new Rectangle(0,30,(m_animation.frameCount - 1) * 10,0));
+				event.stopImmediatePropagation();
+				isDrag = true;
+			}
+			protected function mouseUpHandler(event:MouseEvent):void{
+				dragBtn.stopDrag();
+				dragBtn.x = int(dragBtn.x/10) * 10;
+				isDrag = false;
+			}
+			protected function mouseMoveHandler(event:MouseEvent):void{
+				if(isDrag){
+					var curFrame:int = int(dragBtn.x/10);
+					if(m_curFrame!= curFrame){
+						m_curFrame = curFrame;
+						curFrameLabel.text = m_curFrame.toString();
+						fsCB.selectedItem = "";
+						for each(var frameString:FrameString in m_frameStrings){
+							if(frameString.m_frameID == m_curFrame){
+								fsCB.selectedItem = frameString.m_string;
+								break;
+							}
+						}
+						EnhanceSkeletonAnimator(info.animationController).play(m_showAni,curFrame,curFrame,curFrame + 1);
+						
+					}
+				}
+			}
+
+			
+			
+			public function set info(value:RenderObject):void
+			{
+				this._info = value;
+				if(value)
+				{
+					sx.value = value.x;
+					sy.value = value.y;
+					sz.value = value.z;
+					
+					tx.text = ""+value.x;
+					ty.text = ""+value.y;
+					tz.text = ""+value.z;
+					
+					rx.value = value.rotationX;
+					ry.value = value.rotationY;
+					rz.value = value.rotationZ;
+					
+					inrx.text = ""+value.rotationX;
+					inry.text = ""+value.rotationY;
+					inrz.text = ""+value.rotationZ;
+					
+					scaleText.text = ""+value.scaleX;
+					scaleSlider.value = value.scaleX;
+				}
+				
+			}
+			
+			
+			public function playAni(str:String):void{
+				m_showAni = str;
+				if(info.aniGroup == null){
+					info.addAniGroupLoadHandler(aniGroupLoadedHandler);
+				}else{
+					aniGroupLoadedHandler();
+				}
+			}
+			private function aniGroupLoadedHandler():void{
+				var m_aniSequenceHeaderInfo:AniSequenceHeaderInfo = info.aniGroup.m_aniSequenceHeaders[info.aniGroup.getAniIndexByName(m_showAni)];
+				m_frameStrings = m_aniSequenceHeaderInfo.frameStrings;
+				
+				var animation:Animation = info.aniGroup.getAnimationData(m_showAni);
+				if(animation == null){
+					aniGroupLoader = new ModelAniGroupLoader();
+					aniGroupLoader.m_onAniLoaded = onAniGrouLoaded;
+					aniGroupLoader.m_aniGroup = info.aniGroup;
+					aniGroupLoader.m_requireAniName = m_showAni;
+					info.aniGroup.addAniLoadHandler(aniGroupLoader);
+				}else{
+					onAniGrouLoaded();					
+				}
+			}
+			public function get info():RenderObject{
+				return this._info;
+			}
+			
+			private function onAniGrouLoaded():void
+			{
+				var _local1:int = info.getAniFrameCount(m_showAni);
+				var _local2:uint = (_local1 * Animation.DEFAULT_FRAME_INTERVAL);
+				
+				updateData();
+			}
+			
+			public function updateData():void{
+				m_animation = info.aniGroup.getAnimationData(m_showAni);
+				var rec:Rectangle = new Rectangle();
+				rec.x = 0;
+				rec.y = 0;
+				rec.width = 9;
+				rec.height = 30;
+				
+				timeContent.graphics.clear();
+//				timeContent.graphics.lineStyle(1,0xcccccc);
+				var fillColor:uint;
+				for(var i:int = 0;i<m_animation.frameCount;i++){
+					rec.x = i * 10;
+					fillColor = 0x000000;
+					for each(var frameString:FrameString in m_frameStrings){
+						if(frameString.m_frameID == i){
+							fillColor = 0xff0000;
+							break;
+						}
+					}
+					timeContent.graphics.beginFill(fillColor);
+					timeContent.graphics.drawRect(rec.x,rec.y,rec.width,rec.height);
+				}
+				timeContent.graphics.endFill();				
+			}
+			
+			protected function fsCB_changeHandler(event:IndexChangeEvent):void
+			{
+				var frameString:FrameString;
+				if(fsCB.selectedItem as String == "null")
+				{
+					for(var i:int = 0;i<m_frameStrings.length;i++)
+					{
+						frameString = m_frameStrings[i];
+						if(frameString && frameString.m_frameID == m_curFrame)
+						{
+							m_frameStrings.splice(i,1);
+							break;
+						}
+					}
+					return;
+				}
+				
+				var has:Boolean = false;
+				for each(frameString in m_frameStrings)
+				{
+					if(frameString.m_frameID == m_curFrame)
+					{
+						frameString.m_string = fsCB.selectedItem as String;
+						has = true;
+						break;
+					}
+				}
+				
+				if(!has)
+				{
+					var fs:FrameString = new FrameString();
+					fs.m_frameID = m_curFrame;
+					fs.m_string = fsCB.selectedItem as String;
+					m_frameStrings.push(fs);
+				}
+			}
+			
+			private function renderObjChange(event:Event):void
+			{
+				var renderObj:RenderObject = ModelManager.getInstance().renderObject;
+				if(renderObj == null)return;
+				switch(event.target)
+				{
+					case sx:
+					case tx:
+						renderObj.x = (sx.value!=renderObj.x)?sx.value:Number(tx.text);
+						sx.value = renderObj.x;
+						tx.text = ""+sx.value;
+						break;
+					case sy:
+					case ty:
+						renderObj.y = (sy.value!=renderObj.y)?sy.value : Number(ty.text);
+						sy.value = renderObj.y;
+						ty.text = ""+sy.value;
+						break;
+					case sz:
+					case tz:
+						renderObj.z = (sz.value!=renderObj.z)?sz.value:Number(tz.text);
+						sz.value = renderObj.z;
+						tz.text = ""+sz.value;
+						break;
+					case rx:
+					case inrx:
+						renderObj.rotationX = (rx.value!=renderObj.rotationX)?rx.value:Number(inrx.text);
+						rx.value = renderObj.rotationX;
+						inrx.text = ""+rx.value;
+						break;
+					case ry:
+					case inry:
+						renderObj.rotationY = (ry.value!=renderObj.rotationY)?ry.value:Number(inry.text);
+						ry.value = renderObj.rotationY;
+						inry.text = ""+ry.value;
+						break;
+					case rz:
+					case inrz:
+						renderObj.rotationZ = (rz.value!=renderObj.rotationZ)?rz.value:Number(inrz.text);
+						rz.value = renderObj.rotationZ;
+						inrz.text = ""+rz.value;
+						break;
+					case scaleText:
+					case scaleSlider:
+						renderObj.scaleX = renderObj.scaleY = renderObj.scaleZ = (scaleSlider.value!=renderObj.scaleX)?scaleSlider.value:Number(scaleText.text);
+						scaleSlider.value = renderObj.scaleX;
+						scaleText.text = ""+scaleSlider.value;
+						break;
+				}
+			}
+			
+			private function logEvent(evt:LogEvent) : void
+			{
+				tabID.selectedIndex = 1;
+				var va:* = getTimer() + " : " + evt.text;
+				if(evt.level == LogEvent.ERROR)
+				{
+					va = "<font color=\"#ff8080\">" + va + "</font>";
+				}
+				else if(evt.level == LogEvent.INFO)
+				{
+					va = "<font color=\"#707070\">" + va + "</font>";
+				}
+				else if(evt.level == LogEvent.WARNING)
+				{
+					va = "<font color=\"#907020\">" + va + "</font>";
+				}
+				else if(evt.level == LogEvent.MESSAGE)
+				{
+					va = "<font color=\"#409040\">" + va + "</font>";
+				}
+				
+				if(_outPut != null)
+				{
+					if(!evt.clear)
+					{
+						//					_outPut.htmlText += va + "<br><br>";
+						_outPut.htmlText+=va + "<br><br>";
+					}
+					else
+					{
+						//					_outPut.htmlText = va + "<br><br>";
+						_outPut.htmlText = va + "<br><br>";
+					}	
+				}else
+				{
+					errorText = va + "<br><br>";
+				}
+				
+//				_outPut.scrollV = _outPut.maxScrollV;
+				
+//				var lines:int = _outPut.numLines;
+//				if(lines > 250)
+//				{
+//					_outPut.htmlText = _outPut.htmlText.substr(_outPut.htmlText.indexOf("</P>",250) + 4);
+//				}
+			}
+			
+			private function textComplete(evt:Event):void
+			{
+				_outPut.htmlText = errorText;
+			}
+			
+			protected function checkbox1_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				if(Game.instance.renderer)
+				{
+					Game.instance.renderer.m_ignoreTerrainRender = isShowTerrain.selected;
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	<mx:TabNavigator id="tabID" width="100%" height="100%">
+		<s:NavigatorContent width="100%" height="100%" label="舞台">
+			<s:BorderContainer id="contentId" x="0" y="-8" width="100%" height="50" backgroundColor="#878789" borderVisible="false"/>
+			<s:Label x="5" y="52" text="Frame ID:"/>
+			<s:Label x="125" y="52" text="Frame String:"/>
+			<s:ComboBox id="fsCB" x="203" y="47" change="fsCB_changeHandler(event)"/>
+			<s:Label x="10" y="135" text="x坐标"/>
+			<s:HSlider id="sx" x="10" y="155" width="364" change="renderObjChange(event)" maximum="30000" minimum="0" value="0"/>
+			<s:Label x="10" y="175" text="y坐标"/>
+			<s:HSlider id="sy" x="10" y="195" width="364" change="renderObjChange(event)" maximum="30000" minimum="0" value="0"/>
+			<s:Label x="10" y="215" text="z坐标"/>
+			<s:HSlider id="sz" x="10" y="235" width="364" change="renderObjChange(event)" maximum="30000" minimum="0" value="0"/>
+			<s:Label x="400" y="135" text="x旋转"/>
+			<s:HSlider id="rx" x="400" y="155" width="364" change="renderObjChange(event)" maximum="360" minimum="0" value="0"/>
+			<s:Label x="400" y="175" text="y旋转"/>
+			<s:HSlider id="ry" x="400" y="195" width="364" change="renderObjChange(event)" maximum="360" minimum="0" value="0"/>
+			<s:Label x="400" y="215" text="z旋转"/>
+			<s:HSlider id="rz" x="400" y="235" width="364" change="renderObjChange(event)" maximum="360" minimum="0" value="0"/>
+			<s:TextInput id="tx" x="42" y="130" change="renderObjChange(event)" text="0"/>
+			<s:TextInput id="inrx" x="432" y="130" change="renderObjChange(event)" text="0"/>
+			<s:TextInput id="inry" x="432" y="169" change="renderObjChange(event)" text="0"/>
+			<s:TextInput id="inrz" x="432" y="208" change="renderObjChange(event)" text="0"/>
+			<s:TextInput id="ty" x="42" y="169" change="renderObjChange(event)" text="0"/>
+			<s:TextInput id="tz" x="42" y="208" change="renderObjChange(event)" text="0"/>
+			<s:Label x="10" y="90" text="缩放"/>
+			<s:TextInput id="scaleText" x="42" y="85" text="1" change="renderObjChange(event)"/>
+			<s:HSlider id="scaleSlider" x="10" y="114" width="364" maximum="5" minimum="0.1" stepSize="0.05"
+					   value="1" change="renderObjChange(event)"/>
+			<mx:HRule x="0" y="78" width="100%"/>
+			<s:TextInput id="curFrameLabel" x="64" y="46" width="53" enabled="false" text="0"/>
+			<s:CheckBox x="365" y="53" label="是否隐藏地表" click="checkbox1_clickHandler(event)" id="isShowTerrain"/>
+		</s:NavigatorContent>
+		
+		<s:NavigatorContent width="100%" height="100%" label="输出">
+			<mx:TextArea x="4" y="-6" width="100%" height="100%" id="_outPut" creationComplete="textComplete(event)"/>
+		</s:NavigatorContent>
+	</mx:TabNavigator>
+	
+</s:Group>

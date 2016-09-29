@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300">
+	
+	<fx:Script>
+		<![CDATA[
+			import app.manager.ModelManager;
+			
+			import deltax.common.resource.Enviroment;
+			protected function importAns_clickHandler(event:MouseEvent):void
+			{
+				var file:File = new File(Enviroment.ResourceRootPath);
+				file.addEventListener(Event.SELECT, selectAniGroupFileHandler);
+				file.browseForOpen("导入骨骼文件", [new FileFilter("ans","*.ans")]);		
+			}
+			
+			private function selectAniGroupFileHandler(event:Event):void
+			{
+				ModelManager.getInstance().importAniGroupHandler(event.currentTarget as File);
+			}
+			
+			protected function testAni_clickHandler(event:MouseEvent):void
+			{
+				var file:File = new File(Enviroment.ResourceRootPath);
+				file.addEventListener(Event.SELECT, selectTestAniFileHandler);
+				file.browseForOpen("导入动作文件", [new FileFilter("ani","*.ani")]);
+			}
+			
+			private function selectTestAniFileHandler(event:Event):void
+			{
+				//
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Button id="importAns" x="10" y="36" width="100" height="35" label="导入骨骼组" toolTip="导入打包好的ans文件"
+			  click="importAns_clickHandler(event)"/>
+	<s:Button id="testAni" x="123" y="36" width="100" height="35" label="测试动作" enabled="false"
+			  click="testAni_clickHandler(event)"/>
+</s:Group>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="354" height="550" close="closeHandler(event)" creationComplete="titlewindow1_creationCompleteHandler(event)">
+	<fx:Script>
+		<![CDATA[
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			import app.equipment.DressingRoom;
+			import app.equipment.Equipment;
+			public static const SELECT_WEAPON:String = "SELECT_WEAPON";
+			
+			public var curEquipment:Equipment;
+			public var curWeaonName:String;
+			protected function closeHandler(event:CloseEvent):void
+			{
+				// TODO Auto-generated method stub
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				// TODO Auto-generated method stub
+				var m_equipmentPackages:Dictionary = DressingRoom.Instance.m_equipGroups[3].m_equipmentPackages;
+				/* var tempidx:String;
+				var tempArr1:Array = [];
+				var tempArr2:Array = [];
+				var nodeStr:String = "<node label='equip'>"
+				for (tempidx in m_equipmentPackages)
+				{
+					tempArr1.push(tempidx);
+				}
+				tempArr1.sort();
+				for(var j:int = 0;j<tempArr1.length;j++)
+				{
+					var m_equipmentPackageIdx:String = tempArr1[j];
+					var nodeStrr:String = "<node label='" + m_equipmentPackageIdx + "' value='"+3 + "%m_equipmentPackages%" + m_equipmentPackageIdx +"'>";
+					tempArr2 = [];
+					for (tempidx in m_equipmentPackages[m_equipmentPackageIdx])
+					{
+						tempArr2.push({modelId:Equipment(m_equipmentPackages[m_equipmentPackageIdx][tempidx]).modelID,tempidx:tempidx});
+					}
+					tempArr2.sortOn("modelId");
+					for(var k:int = 0;k<tempArr2.length;k++)
+					{
+						var childIdx:String = tempArr2[k].tempidx;
+						var nodeStrrr:String = "<node label='" + childIdx + "' value='"+ childIdx+"%"+m_equipmentPackageIdx + "'>";
+						nodeStrrr+="</node>";
+						nodeStrr += nodeStrrr;
+					}
+					nodeStrr+="</node>";
+					nodeStr+=nodeStrr;
+				}
+				nodeStr+="</node>"; */
+				 var nodeStrr:String = "<node label='equip'>";
+				for(var childIdx:String in m_equipmentPackages["weapon"]){
+					var nodeStrrr:String = "<node label='" + childIdx + "' value='" + childIdx + "'>";
+					nodeStrrr+="</node>";
+					nodeStrr += nodeStrrr;
+				}
+				nodeStrr+="</node>"; 
+				treeId.dataProvider =  new XML(nodeStrr);
+			}
+			
+			protected function treeId_doubleClickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				curWeaonName = treeId.selectedItem.@value.toString();
+				curEquipment = DressingRoom.Instance.m_equipGroups[3].m_equipmentPackages[curWeaonName];
+				dispatchEvent(new Event(SELECT_WEAPON));
+				closeHandler(null);
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<mx:Tree id="treeId" x="7" y="5" width="331" height="503" labelField="@label" dataTipField="@value" showRoot="false" doubleClickEnabled="true" doubleClick="treeId_doubleClickHandler(event)"></mx:Tree>
+</s:TitleWindow>

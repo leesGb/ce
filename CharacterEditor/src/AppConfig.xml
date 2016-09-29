@@ -1,0 +1,12 @@
+<AppConfig>
+	<UpdateServer value="http://192.168.1.25/tools/CharacterEditor"/>
+	<Version value="1.0.5"/>
+	<FileName value="CharacterEditor.air"/>
+	<Descritions>
+		<Desc value="1.0.1; 添加坐骑装备打包"/>
+		<Desc value="1.0.2; 添加武器挂点缩小的字段"/>	
+		<Desc value="1.0.3; 修复清理链接对象的报错"/>			
+		<Desc value="1.0.4; 优化"/>		
+		<Desc value="1.0.5; 镜头移动"/>	
+	</Descritions>
+</AppConfig>

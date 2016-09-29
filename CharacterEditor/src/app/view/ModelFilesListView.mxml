@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   width="628" height="612"
+			   initialize="titlewindow1_initializeHandler(event)" title="model file list">
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.manager.ResourceManager;
+			import deltax.graphic.manager.ResourceType;
+			import deltax.graphic.model.HPieceGroup;
+			import deltax.graphic.model.PieceClass;
+			import deltax.graphic.model.PieceGroup;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			protected function titlewindow1_initializeHandler(event:FlexEvent):void
+			{
+				// TODO Auto-generated method stub
+				//var rootFile:File = new File(Enviroment.ResourceRootPath + "fx/cfg");
+				var rootFile:File = new File(Enviroment.ResourceRootPath);
+				var arr:Array = [];
+				checkFileArr(rootFile,arr);
+				var ac:ArrayCollection = new ArrayCollection(arr);				
+				treeId.dataProvider = ac;
+			}
+			
+			private function checkFileArr(parentFile:File,arr:Array):void{
+				for each(var file:File in parentFile.getDirectoryListing()){
+					if(file.name.indexOf("svn") == -1 && 
+						(!file.isDirectory || (file.isDirectory &&
+							(file.name.indexOf("pet") != -1 ||
+							file.name.indexOf("role") != -1 ||
+							file.name.indexOf("weapon") != -1 ||
+							file.name.indexOf("mount") != -1 ||
+							file.name.indexOf("mod") != -1 ||
+							file.name.indexOf("npc") != -1 ||
+							file.name.indexOf("missile") != -1 ||
+							file.name.indexOf("partner") != -1
+							)))){
+						var obj:Object = new Object();
+						arr.push(obj);
+						obj.name = file.name;
+						obj.data = file;
+						if(file.isDirectory){
+							var childArr:Array = [];
+							checkFileArr(file,childArr);
+							obj.children = new ArrayCollection(childArr);
+						}else{
+							obj.children = null;
+						}
+					}
+				}
+			}			
+			
+			private var curPieceGroup:PieceGroup;
+			protected function selectItemHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				if(treeId.selectedItem == null)return;
+				
+				var curFile:File = treeId.selectedItem.data as File;
+				
+				if(curFile.name.split(".").reverse()[0] == "ams"){
+					curPieceGroup = ResourceManager.instance.getResource(curFile.nativePath, ResourceType.PIECE_GROUP, onPieceGroupLoad,PieceGroup) as PieceGroup;
+				}else if(curFile.name.split(".").reverse()[0] == "bms"){
+					curPieceGroup = ResourceManager.instance.getResource(curFile.nativePath, ResourceType.BMS_GROUP, onPieceGroupLoad,HPieceGroup) as HPieceGroup;
+					(curPieceGroup as HPieceGroup).type = ResourceType.BMS_GROUP;
+				}
+			}
+			
+			private function onPieceGroupLoad(group:PieceGroup, b:Boolean):void{
+				var arr:Array = [];
+				for each(var pieceClass:PieceClass in group.m_pieceClasses){
+					arr.push(pieceClass);
+				}
+				pieceClassTreeId.dataProvider = new ArrayCollection(arr);
+			}
+			
+			public var callBack:Function;
+			public var preView:Function;
+			protected function selectPieceClassHandler(event:MouseEvent):void
+			{
+//				if(curPieceGroup == null || pieceClassTreeId.selectedItem == null)return;
+//				
+//				var pieceGroupName:String = curPieceGroup.name;
+//				pieceGroupName = pieceGroupName.replace(/(.*)data\/((pet|role|weapon|npc|partner|mount)\/)/i,"$2");
+//				callBack(pieceGroupName,(pieceClassTreeId.selectedItem as PieceClass).m_name);
+			}
+			
+			private function preViewHandler(evt:MouseEvent):void
+			{
+				if(curPieceGroup == null || pieceClassTreeId.selectedItem == null)
+				{
+					return;	
+				}
+				var pieceGroupName:String = curPieceGroup.name;
+				pieceGroupName = pieceGroupName.replace(/(.*)data\/((pet|role|weapon|npc|partner|mount)\/)/i,"$2");
+				preView(pieceGroupName,(pieceClassTreeId.selectedItem as PieceClass).m_name);
+			}
+			
+			private function okHandler(evt:MouseEvent):void
+			{
+				if(curPieceGroup == null || pieceClassTreeId.selectedItem == null)
+				{
+					return;	
+				}
+				var pieceGroupName:String = curPieceGroup.name;
+				pieceGroupName = pieceGroupName.replace(/(.*)data\/((pet|role|weapon|npc|partner|mount)\/)/i,"$2");
+				callBack(pieceGroupName,(pieceClassTreeId.selectedItem as PieceClass).m_name);
+			}
+			
+		]]>
+	</fx:Script>
+	<mx:Tree id="treeId" x="11" y="30" width="299" height="539" labelField="name" showRoot="false" click="selectItemHandler(event)"></mx:Tree>
+	<mx:Tree id="pieceClassTreeId" x="318" y="30" width="298" height="395" labelField="m_name" click="selectPieceClassHandler(event)"></mx:Tree>
+	<s:Label x="318" y="10" text="piececlass"/>
+	<s:Label x="10" y="10" text="model file"/>
+	<s:Button x="381" y="481" label="preView" click="preViewHandler(event)"/>
+	<s:Button x="487" y="481" label="ok" click="okHandler(event)"/>
+</s:TitleWindow>

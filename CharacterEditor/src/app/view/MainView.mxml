@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009"
+				   xmlns:s="library://ns.adobe.com/flex/spark"
+				   xmlns:mx="library://ns.adobe.com/flex/mx"
+				   xmlns:ns1="*"
+				   width="730" height="468"
+				   creationComplete="group1_creationCompleteHandler(event)">
+	<s:layout>
+		<s:BasicLayout/>
+	</s:layout>
+	<fx:Script>
+		<![CDATA[
+			import com.hmh.SkeletonPreview;
+			import app.manager.ModelManager;
+			
+			import deltax.*;
+			import deltax.common.DictionaryUtil;
+			import deltax.common.Util;
+			import deltax.graphic.model.AniSequenceHeaderInfo;
+			import deltax.graphic.model.AnimationGroup;
+			import deltax.graphic.model.Piece;
+			import deltax.graphic.model.PieceClass;
+			import deltax.graphic.model.PieceGroup;
+			import deltax.graphic.model.Socket;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			import deltax.graphic.scenegraph.object.SubGeometry;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			private var curRenderObject:RenderObject;
+			protected function group1_creationCompleteHandler(event:FlexEvent):void
+			{
+				ModelManager.getInstance().addEventListener(ModelManager.CHANGE_MODEL,__changeModelHandler);
+			}
+			
+			private function __changeModelHandler(evt:Event):void
+			{
+				setTimeout(changeModel,2000);
+			}
+			
+			private function changeModel():void
+			{
+				curRenderObject = ModelManager.getInstance().renderObject;
+				var pgs:Vector.<PieceGroup> = curRenderObject.m_pieceGroups;
+				var arr:Array = [];
+				for (var i:int = 0; i < pgs.length; i++ ) 
+				{
+					arr.push(pgs[i]);
+				}
+				pieceGroupDg.dataProvider =  new ArrayCollection(arr);
+				
+				var triCnt:uint = 0;
+				for each(var subGeo:SubGeometry in curRenderObject.geometry.subGeometries)
+				{
+					triCnt += subGeo.numTriangles
+				}
+				trCnt.text = triCnt.toString();
+				if(curRenderObject.aniGroup && curRenderObject.aniGroup.m_gammaSkeletals)
+				{
+					skeletonCnt.text = curRenderObject.aniGroup.m_gammaSkeletals.length.toString();
+				}
+				else
+				{
+					skeletonCnt.text = "null";
+				}
+					
+				arr = [];
+				var animationGroup:AnimationGroup = curRenderObject.m_aniGroup;
+				if(animationGroup && animationGroup.m_aniSequenceHeaders)
+				{
+					for ( i = 0;i < animationGroup.m_aniSequenceHeaders.length; i++ ) 
+					{
+						arr.push(animationGroup.m_aniSequenceHeaders[i]);
+					}
+				}
+				animationDg.dataProvider = new ArrayCollection(arr)
+					
+				var socketArr:Array = [];
+				var skeletonArr:Array = [];
+				var socket:deltax.graphic.model.Socket;
+				if(animationGroup && animationGroup.m_gammaSkeletals)
+				{
+					for (i= 0; i < animationGroup.m_gammaSkeletals.length; i++ ) 
+					{
+						skeletonArr.push(animationGroup.m_gammaSkeletals[i]);
+						
+						if(animationGroup.m_gammaSkeletals[i].m_sockets)
+						{
+							for(var j:int = 0;j<animationGroup.m_gammaSkeletals[i].m_sockets.length;j++)
+							{
+								socket = animationGroup.m_gammaSkeletals[i].m_sockets[j];
+								socketArr.push(socket);
+							}
+						}
+					}
+				}
+				skeletonDg.dataProvider = new ArrayCollection(skeletonArr);
+				socketDg.dataProvider = new ArrayCollection(socketArr);
+				
+				SkeletonPreview.getInstance().add(curRenderObject);
+				
+				ModelTimelineView.instance.info = curRenderObject;
+			}
+			
+			private function dataGridIdSelectChangeHandler(evt:Event):void{
+				if(pieceClassDg.selectedItem == null){
+					Alert.show("pieceClassDg selecteditem is null");
+					return;
+				}
+				
+				var arr:Array = [];
+				var i:int = 0;
+				for each(var piece:Piece in PieceClass(pieceClassDg.selectedItem).m_pieces){
+					var obj:Object = new Object();
+					obj.m_name = i++;
+					obj.m_value = piece;
+					arr.push(obj);
+				}
+				piecesDg.dataProvider = new ArrayCollection(arr);
+			}
+			private function pieceGroupSelectHandler(evt:Event):void{
+				var curPG:PieceGroup = PieceGroup(pieceGroupDg.selectedItem);
+				var arr:Array = [];
+				if(curPG.m_pieceClasses == null)
+				{
+					Alert.show("m_pieceClasses == null");return;
+				}
+				for(var i:int = 0;i<curPG.m_pieceClasses.length;i++)
+				{
+//					var checkName:String = checkHasNameSame(curPG.m_pieceClasses[i].m_name,arr);
+//					curPG.m_pieceClasses[i].m_name = checkName;
+					arr.push(curPG.m_pieceClasses[i]);
+				}
+				pieceClassDg.dataProvider = new ArrayCollection(arr);
+			}
+			
+			private function checkHasNameSame(curName:String,arr:Array):String
+			{
+				var len:uint = arr.length;
+				var name:String;
+				var index:uint;
+				var nameArr2:Array = curName.split("_");
+				var headName2:String = nameArr2[0];
+				var jobName2:String = nameArr2[1];
+				var posName2:String = nameArr2[2];
+				var editorName2:String = nameArr2[3];
+				for(var i:uint =0;i<len;i++)
+				{
+					name = PieceClass(arr[i]).m_name;
+					var nameArr:Array = name.split("_");
+					var headName:String = nameArr[0];
+					var jobName:String = nameArr[1];
+					var posName:String = nameArr[2];
+					var editorName:String = nameArr[3];
+					//
+					if(headName == headName2 && jobName == jobName2&& posName == posName2)
+					{
+						index++;
+					}
+				}
+				if(index>0)
+				{
+					curName =	headName2+"_"+jobName2+"_"+posName2+"_"+index;
+				}
+				return curName;
+			}
+			
+			private function showOnePieceGroup(evt:Event):void{
+				var curPG:PieceGroup = PieceGroup(pieceGroupDg.selectedItem);
+				ModelManager.getInstance().showOnePieceGroup(curPG);
+			}
+			private function playerPlayAnimationHandler(evt:Event):void{
+				var animationHead:AniSequenceHeaderInfo = AniSequenceHeaderInfo(animationDg.selectedItem);
+				curRenderObject.playAni(animationHead.rawAniName);
+				
+				ModelTimelineView.instance.playAni(animationHead.rawAniName);
+			}
+			
+			private function socketDoubleClickHandler(evt:MouseEvent):void{
+				var socket:deltax.graphic.model.Socket = deltax.graphic.model.Socket(socketDg.selectedItem);
+				var socketProprties:SocketProperties = PopUpManager.createPopUp(this,SocketProperties,false) as SocketProperties;
+				PopUpManager.centerPopUp(socketProprties);
+				socketProprties.socketInfo = socket;
+			}
+			private function addAniClick(evt:MouseEvent):void{
+				if(curRenderObject == null || curRenderObject.m_aniGroup == null){
+					Alert.show("curRenderObject.m_aniGroup is null");
+					return;
+				}
+				
+				var file:File = new File();
+				file.addEventListener(FileListEvent.SELECT_MULTIPLE, __selectAnimlFileHandler);
+				file.browseForOpenMultiple("导入ani动作文件", [new FileFilter("ani","*.ani")]);	
+				return;
+				//
+				/*
+				var addAniWindow:AddAnimationWindow = PopUpManager.createPopUp(this,AddAnimationWindow) as AddAnimationWindow;
+				PopUpManager.centerPopUp(addAniWindow);
+				addAniWindow.okHandler = function ():void{
+					var aniName:String = "./" + addAniWindow.aniName.text + ".ani";
+					curRenderObject.m_aniGroup.m_dependantResList[0].m_resFileNames.push(aniName);
+					var anihinfo:AniSequenceHeaderInfo = new AniSequenceHeaderInfo();
+					curRenderObject.m_aniGroup.m_aniSequenceHeaders.push(anihinfo);
+					anihinfo.load2();
+					anihinfo.rawAniName = addAniWindow.aniName.text;
+					var idx:int = curRenderObject.m_aniGroup.m_aniSequenceHeaders.length - 1;
+					curRenderObject.m_aniGroup.m_aniNameToIndexMap[anihinfo.rawAniName] = idx;
+					curRenderObject.m_aniGroup.m_sequences[idx] = null;
+					changeModel();
+				}*/
+			}
+			private function __selectAnimlFileHandler(event:FileListEvent):void{
+				File(event.currentTarget).removeEventListener(FileListEvent.SELECT_MULTIPLE, __selectAnimlFileHandler);
+				var list:Array = event.files;
+				var aniName:String;
+				var anihinfo:AniSequenceHeaderInfo;
+				var hasanihinfo:Boolean = false;
+				if (list && list.length>0) {
+					for each(var file:File in list){
+						hasanihinfo = false;
+						var anifileName:String = Util.makeGammaString(file.nativePath).split("/").pop();
+						anifileName = (anifileName.substring(0, anifileName.indexOf(".")));
+						anifileName = anifileName.replace(curRenderObject.m_aniGroup.pureName + "_","");
+						aniName = "./" + anifileName + ".ani";
+						curRenderObject.m_aniGroup.m_dependantResList[0].m_resFileNames.push(aniName);
+						for each(anihinfo in curRenderObject.m_aniGroup.m_aniSequenceHeaders){
+							if(anihinfo.rawAniName == anifileName.replace(curRenderObject.m_aniGroup.pureName + "_","")){
+								hasanihinfo = true;
+								break;
+							}
+						}
+						if(hasanihinfo == false){
+							anihinfo = new AniSequenceHeaderInfo();
+							curRenderObject.m_aniGroup.m_aniSequenceHeaders.push(anihinfo);
+							anihinfo.load2();
+							//var anim:Animation = ResourceManager.instance.getResource(Util.makeGammaString(file.nativePath),ResourceType.ANIMATION_SEQ,function (ir:IResource,b:Boolean):void{
+							//	var anim:Animation = ir as Animation;
+							//	anihinfo.maxFrame = anim.frameCount; 
+							//}) as Animation;
+							//if(anim.loaded)
+							//	anihinfo.maxFrame = anim.frameCount
+							anihinfo.rawAniName = anifileName;
+							var idx:int = curRenderObject.m_aniGroup.m_aniSequenceHeaders.length - 1;
+							curRenderObject.m_aniGroup.m_aniNameToIndexMap[anihinfo.rawAniName] = idx;
+							curRenderObject.m_aniGroup.m_sequences[idx] = null;	
+							curRenderObject.m_aniGroup.requestAnimationSequenceByName(anihinfo.rawAniName);	
+						}
+					}
+				}
+				changeModel();
+			}
+			private function deleteAniClick(evt:MouseEvent):void{
+				Alert.show("确定要删除动作吗","提示",Alert.OK|Alert.CANCEL,null,function (event:CloseEvent):void{
+					if(event.detail == Alert.OK){
+						var aniSH:AniSequenceHeaderInfo = animationDg.selectedItem as AniSequenceHeaderInfo;
+						var idx:int = curRenderObject.m_aniGroup.m_aniSequenceHeaders.indexOf(aniSH);
+						curRenderObject.m_aniGroup.m_aniSequenceHeaders.splice(idx,1);
+						curRenderObject.m_aniGroup.m_sequences.splice(idx,1);
+						DictionaryUtil.clearDictionary(curRenderObject.m_aniGroup.m_aniNameToIndexMap);
+						for(var i:int = 0;i<curRenderObject.m_aniGroup.m_aniSequenceHeaders.length;i++){
+							var ah:AniSequenceHeaderInfo = curRenderObject.m_aniGroup.m_aniSequenceHeaders[i];
+							curRenderObject.m_aniGroup.m_aniNameToIndexMap[ah.rawAniName] = i;
+						}
+						changeModel();
+					}
+				});
+			}
+			private function saveAnsClick(evt:MouseEvent):void{
+				ModelManager.getInstance().exportAns(curRenderObject.m_aniGroup);
+			}
+			
+			private function addSocketClickHandler(event:MouseEvent):void
+			{
+				var animationGroup:AnimationGroup = curRenderObject.m_aniGroup;
+				var addSocketView:AddSocketView = AddSocketView(PopUpManager.createPopUp(this,AddSocketView,true));
+				PopUpManager.centerPopUp(addSocketView);
+				addSocketView.aniGroup = animationGroup;
+				addSocketView.okCallBack = function ():void
+				{
+					var socketArr:Array = [];
+					if(animationGroup && animationGroup.m_gammaSkeletals)
+					{
+						for (var i:int = 0; i < animationGroup.m_gammaSkeletals.length; i++ ) 
+						{
+							if(animationGroup.m_gammaSkeletals[i].m_sockets)
+							{
+								animationGroup.m_gammaSkeletals[i].m_socketCount = animationGroup.m_gammaSkeletals[i].m_sockets.length;
+								for(var j:int = 0;j<animationGroup.m_gammaSkeletals[i].m_sockets.length;j++)
+								{
+									socketArr.push(animationGroup.m_gammaSkeletals[i].m_sockets[j]);
+								}
+							}
+						}
+					}				
+					socketDg.dataProvider = new ArrayCollection(socketArr);
+				}
+			}
+			private function deleteSocketClickHandler(event:MouseEvent):void{
+				var socketArr:Array = [];
+				var animationGroup:AnimationGroup = curRenderObject.m_aniGroup;
+				var skeletonArr:Array = [];
+				if(animationGroup && animationGroup.m_gammaSkeletals){
+					for (var i:int = 0; i < animationGroup.m_gammaSkeletals.length; i++ ) {
+						if(animationGroup.m_gammaSkeletals[i].m_sockets){
+							animationGroup.m_gammaSkeletals[i].m_socketCount = animationGroup.m_gammaSkeletals[i].m_sockets.length;							
+							for(var j:int = 0;j<animationGroup.m_gammaSkeletals[i].m_sockets.length;j++){
+								if(animationGroup.m_gammaSkeletals[i].m_sockets[j] == socketDg.selectedItem){
+									animationGroup.m_gammaSkeletals[i].m_sockets.splice(j,1);
+								}else{
+									socketArr.push(animationGroup.m_gammaSkeletals[i].m_sockets[j]);
+								}
+							}
+						}
+					}
+				}				
+				socketDg.dataProvider = new ArrayCollection(socketArr);
+			}
+			
+			private function pieceSelectClickHandler(event:MouseEvent):void{
+				if(piecesDg.selectedItem){
+					var pd:PieceEditView = PopUpManager.createPopUp(this,PieceEditView,true) as PieceEditView;
+					pd.info = piecesDg.selectedItem.m_value as Piece;
+					PopUpManager.centerPopUp(pd);
+				}
+			}
+			
+			private function skeletonSelectHandler(event:Event):void{
+				SkeletonPreview.getInstance().selectSkeletal(skeletonDg.selectedIndex);
+			}
+			
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:DataGrid id="pieceGroupDg" x="3" y="3" width="293" height="213" color="#000000"
+				contentBackgroundColor="#FFFFFF" doubleClick="showOnePieceGroup(event)"
+				doubleClickEnabled="true" requestedRowCount="4"
+				selectionChange="pieceGroupSelectHandler(event)">
+		<s:columns>
+			<s:ArrayList>
+				<s:GridColumn dataField="m_name" headerText="PieceGorup"></s:GridColumn>
+			</s:ArrayList>
+		</s:columns>
+	</s:DataGrid>
+	<s:DataGrid id="pieceClassDg" x="303" y="3" width="211" height="213" color="#000000"
+				contentBackgroundColor="#FFFFFF" requestedRowCount="4"
+				selectionChange="dataGridIdSelectChangeHandler(event)">
+		<s:columns>
+			<s:ArrayList>
+				<s:GridColumn dataField="m_name" headerText="PieceClass"></s:GridColumn>
+			</s:ArrayList>
+		</s:columns>
+	</s:DataGrid>
+	<s:DataGrid id="socketDg" x="303" y="219" width="211" height="213" color="#000000"
+				contentBackgroundColor="#FFFFFF" doubleClick="socketDoubleClickHandler(event)"
+				doubleClickEnabled="true" requestedRowCount="4">
+		<s:columns>
+			<s:ArrayList>
+				<s:GridColumn dataField="m_name" headerText="Socket"></s:GridColumn>
+			</s:ArrayList>
+		</s:columns>
+	</s:DataGrid>
+	<s:DataGrid id="animationDg" x="3" y="219" width="293" height="213" borderColor="#4F4F4F"
+				color="#000000" contentBackgroundColor="#FFFFFF" requestedRowCount="4"
+				selectionChange="playerPlayAnimationHandler(event)">
+		<s:columns>
+			<s:ArrayList>
+				<s:GridColumn dataField="rawAniName" headerText="Animation"></s:GridColumn>
+			</s:ArrayList>
+		</s:columns>
+	</s:DataGrid>
+	<s:DataGrid id="skeletonDg" x="522" y="219" width="196" height="213" color="#000000"
+				contentBackgroundColor="#FFFFFF" requestedRowCount="4"
+				selectionChange="skeletonSelectHandler(event)">
+		<s:columns>
+			<s:ArrayList>
+				<s:GridColumn dataField="m_name" headerText="Skeleton"></s:GridColumn>
+			</s:ArrayList>
+		</s:columns>
+	</s:DataGrid>
+	<s:Button x="36" y="439" label="add ani" click="addAniClick(event)"/>
+	<s:Button x="110" y="439" label="delete" click="deleteAniClick(event)"/>
+	<s:Button x="183" y="439" label="save" click="saveAnsClick(event)"/>
+	<s:Button x="350" y="439" width="52" label="add" click="addSocketClickHandler(event)"/>
+	<s:Button x="420" y="439" width="44" label="del" click="deleteSocketClickHandler(event)"/>
+	<s:DataGrid id="piecesDg" x="522" y="3" width="196" height="213" color="#000000"
+				contentBackgroundColor="#FFFFFF" doubleClick="pieceSelectClickHandler(event)"
+				doubleClickEnabled="true" requestedRowCount="4">
+		<s:columns>
+			<s:ArrayList>
+				<s:GridColumn dataField="m_name" headerText="pieces"></s:GridColumn>
+			</s:ArrayList>
+		</s:columns>
+	</s:DataGrid>
+	<s:Label x="619" y="444" text="面数"/>
+	<s:TextInput id="trCnt" x="645" y="439" width="73"/>
+	<s:TextInput id="skeletonCnt" x="543" y="439" width="73"/>
+	<s:Label x="517" y="444" text="骨骼"/>
+</s:BorderContainer>

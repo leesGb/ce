@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="606" height="360" creationComplete="group1_creationCompleteHandler(event)">
+	<fx:Script>
+		<![CDATA[
+			import app.manager.ModelManager;
+			
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.manager.IResource;
+			import deltax.graphic.manager.ResourceManager;
+			import deltax.graphic.manager.ResourceType;
+			import deltax.graphic.model.AnimationGroup;
+			import deltax.graphic.model.Socket;
+			
+			import mx.events.FlexEvent;
+			
+			private var fileList:Array = []; 
+			
+			protected function group1_creationCompleteHandler(event:FlexEvent):void
+			{
+				var path:String = Enviroment.ResourceRootPath;
+				var file:File = new File(path);
+				checkFile(file);
+				trace("len=================",fileList.length);
+			}
+			
+			private function callBack(resource:IResource,issuccess:Boolean):void
+			{
+				if(!issuccess)
+				{
+					trace("load fail==============",resource.name);
+					return;
+				}
+				var aniG:AnimationGroup = resource as AnimationGroup;
+				var socket:deltax.graphic.model.Socket;
+				if(aniG && aniG.m_gammaSkeletals)
+				{
+					ModelManager.getInstance().exportAnsWithoutWin(aniG);
+					trace("save successful============",resource.name);
+				}
+			}
+			
+			private function checkFile(file:File):void
+			{
+				if(file.isDirectory)
+				{
+					for each(var maFile:File in file.getDirectoryListing())
+					{
+						if(!maFile.isDirectory)
+						{
+							if(maFile.extension == "ans")
+							{
+								var obj:Object = new Object();
+								obj.name = maFile.name;
+								obj.nativePath = maFile.nativePath;
+								obj.data = maFile;
+								fileList.push(obj);
+							}
+						}else
+						{
+							checkFile(maFile);
+						}
+					}
+				}
+			}
+			
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				var len:uint = fileList.length;
+				var obj:Object;
+				var tFile:File;
+				var path:String="";
+				for(var i:uint = 0;i<len;i++)
+				{
+					obj = fileList[i];
+					tFile = obj.data as File;
+					path = tFile.nativePath;
+					ResourceManager.instance.getResource(path,ResourceType.ANI_GROUP,callBack);
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Button x="30" y="27" width="546" height="30" label="图片格式转换"
+			  click="button1_clickHandler(event)" enabled="false"/>
+</s:Group>

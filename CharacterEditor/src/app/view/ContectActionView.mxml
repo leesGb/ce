@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="876" height="300" creationComplete="group1_creationCompleteHandler(event)">
+	
+	<fx:Script>
+		<![CDATA[
+			import app.manager.ModelManager;
+			
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.model.AniSequenceHeaderInfo;
+			import deltax.graphic.model.AnimationGroup;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			
+			import flash.utils.setTimeout;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			
+			import spark.events.IndexChangeEvent;
+			
+			private var curRenderObject:RenderObject;
+			
+			private var actionStr1:String="";
+			private var actionStr2:String="";
+			private var actionStr3:String="";
+			private var actionStr4:String="";
+			private var timeNum1:uint;
+			private var timeNum2:uint;
+			private var timeNum3:uint;
+			private var timeNum4:uint;
+			private var playTime:uint;
+			
+			private var actionArr:Array=[];
+			private var timeArr:Array=[];
+			
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				if(curRenderObject == null)return;
+				playTime = 0;
+				actionArr.length=0;
+				timeArr.length = 0;
+				//
+				actionStr1 = (fs_c1.selectedItem)?AniSequenceHeaderInfo(fs_c1.selectedItem).rawAniName:"";
+				actionStr2 = (fs_c2.selectedItem)?AniSequenceHeaderInfo(fs_c2.selectedItem).rawAniName:"";
+				actionStr3 = (fs_c3.selectedItem)?AniSequenceHeaderInfo(fs_c3.selectedItem).rawAniName:"";
+				actionStr4 = (fs_c4.selectedItem)?AniSequenceHeaderInfo(fs_c4.selectedItem).rawAniName:"";
+				//
+				timeNum1 = uint(textInput1.text);
+				timeNum2 = uint(textInput2.text);
+				timeNum3 = uint(textInput3.text);
+				timeNum4 = uint(textInput4.text);
+				//
+				actionArr.push(actionStr1);
+				actionArr.push(actionStr2);
+				actionArr.push(actionStr3);
+				actionArr.push(actionStr4);
+				//
+				timeArr.push(timeNum1);
+				timeArr.push(timeNum2);
+				timeArr.push(timeNum3);
+				timeArr.push(timeNum4);
+				//
+				if(actionStr1 == "")return;
+				playTime+=1;
+				if(timeNum1>0)
+				{
+					curRenderObject.playAni(actionStr1,true);
+					setTimeout(delayPlay1,timeNum1);
+				}else
+				{
+					curRenderObject.playAni(actionStr1,false);
+					setTimeout(delayPlay1,getAniTime(actionStr1));
+				}
+			}
+			
+			private function getAniTime(aniName:String):uint
+			{
+				var aniCount:uint = curRenderObject.getAniFrameCount(aniName);
+				var delayTime:uint = curRenderObject.frameInterval*aniCount;
+				return delayTime;
+			}
+			
+			private function delayPlay1():void
+			{
+				if(playTime>actionArr.length-1)
+				{
+					curRenderObject.playAni(actionStr1,true);
+					return;
+				}
+				if(actionArr[playTime].length>0)
+				{
+					if(timeArr[playTime]>0)
+					{
+						curRenderObject.playAni(actionArr[playTime],true);
+						setTimeout(delayPlay1,timeArr[playTime]);
+					}else
+					{
+						curRenderObject.playAni(actionArr[playTime],false);
+						setTimeout(delayPlay1,getAniTime(actionArr[playTime]));
+					}
+					playTime++;
+				}else
+				{
+					curRenderObject.playAni(actionStr1,true);
+					return;
+				}
+			}
+			
+			protected function group1_creationCompleteHandler(event:FlexEvent):void
+			{
+				updateFileTree();
+				ModelManager.getInstance().addEventListener(ModelManager.CHANGE_MODEL,__changeModelHandler);
+			}
+			
+			private function __changeModelHandler(evt:Event):void
+			{
+				setTimeout(changeModel,2000);
+			}
+			
+			private function changeModel():void
+			{
+				button2_clickHandler();
+				//
+				fs_c1.dataProvider = null;
+				fs_c2.dataProvider = null;
+				fs_c3.dataProvider = null;
+				fs_c4.dataProvider = null;
+				//
+				curRenderObject = ModelManager.getInstance().renderObject;
+				var animationGroup:AnimationGroup = curRenderObject.m_aniGroup;
+				var arr:Array=[];
+				if(animationGroup && animationGroup.m_aniSequenceHeaders)
+				{
+					for (var i:int = 0; i < animationGroup.m_aniSequenceHeaders.length; i++ ) 
+					{
+						arr.push(animationGroup.m_aniSequenceHeaders[i]);
+					}
+				}
+				fs_c1.dataProvider = new ArrayCollection(arr);
+				fs_c2.dataProvider = new ArrayCollection(arr);
+				fs_c3.dataProvider = new ArrayCollection(arr);
+				fs_c4.dataProvider = new ArrayCollection(arr);
+			}
+			
+			public function updateFileTree():void
+			{
+				var file:File= new File(Enviroment.ResourceRootPath + "/role/mod");
+				var arr:Array = [];
+				checkFileArr(file,arr);
+				var ac:ArrayCollection = new ArrayCollection(arr);		
+				fs_c0.dataProvider = ac;
+			}
+			
+			private function checkFileArr(parentFile:File,arr:Array,type:uint = 0):void
+			{
+				for each(var file:File in parentFile.getDirectoryListing())
+				{
+					if(file.name.indexOf("svn") == -1)
+					{	
+						if(type==0)
+						{
+							if(file.name.indexOf("weapon")>-1)continue;	
+						}
+						if(file.name.indexOf(".ams") == -1)continue;
+						var obj:Object = new Object();
+						arr.push(obj);
+						obj.name = file.name;
+						obj.data = file;
+						
+						if(file.isDirectory)
+						{
+							var childArr:Array = [];
+							checkFileArr(file,childArr,type);
+							obj.children = new ArrayCollection(childArr);
+						}else
+						{
+							obj.children = null;
+						}
+					}
+				}
+			}
+			
+			protected function fs_c0_changeHandler(event:IndexChangeEvent):void
+			{
+				var file:File = fs_c0.selectedItem.data;
+				if(file)
+				{
+					ModelManager.getInstance().importAmsMesh(file.nativePath);
+				}
+				//
+				setTimeout(delayLoadAns,200,file.nativePath);
+			}
+			
+			private function delayLoadAns(name:String):void
+			{
+				if(ModelManager.getInstance().renderObject == null)
+				{
+					return;
+				}
+				var str1:String = name.replace("mod","ani");
+				var resultStr:String = str1.replace("ams","ans");
+				ModelManager.getInstance().renderObject.setAniGroupByName(resultStr);
+			}
+			
+			protected function button2_clickHandler(event:MouseEvent=null):void
+			{
+				fs_c1.selectedIndex = -1;
+				fs_c2.selectedIndex = -1;
+				fs_c3.selectedIndex = -1;
+				fs_c4.selectedIndex = -1;
+				textInput1.text="0";
+				textInput2.text="0";
+				textInput3.text="0";
+				textInput4.text="0";
+				//
+				clearStr();
+			}
+			
+			private function clearStr():void
+			{
+				actionStr1 = "";
+				actionStr2 = "";
+				actionStr3 = "";
+				actionStr4 = "";
+				//
+				timeNum1 = 0;
+				timeNum2 = 0;
+				timeNum3 = 0;
+				timeNum4 = 0;
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:ComboBox id="fs_c1" x="10" y="63" labelField="rawAniName"/>
+	<s:ComboBox id="fs_c0" x="10" y="16" change="fs_c0_changeHandler(event)" labelField="name"/>
+	<s:ComboBox id="fs_c2" x="164" y="63" labelField="rawAniName"/>
+	<s:ComboBox id="fs_c3" x="318" y="63" labelField="rawAniName"/>
+	<s:ComboBox id="fs_c4" x="472" y="63" labelField="rawAniName"/>
+	<s:TextInput id="textInput1" x="10" y="94" text="0"/>
+	<s:TextInput id="textInput2" x="164" y="94" text="0"/>
+	<s:TextInput id="textInput3" x="318" y="94" text="0"/>
+	<s:TextInput id="textInput4" x="472" y="94" text="0"/>
+	<s:Button x="9" y="154" width="609" height="39" label="播放" click="button1_clickHandler(event)"/>
+	<s:Button x="10" y="211" width="608" height="38" label="清空" click="button2_clickHandler(event)"/>
+</s:Group>
