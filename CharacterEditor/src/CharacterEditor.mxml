@@ -11,26 +11,22 @@
 	</fx:Declarations>
 	<fx:Script>
 		<![CDATA[
+			import com.hmh.utils.FileHelper;
+			
+			import flash.utils.clearTimeout;
+			import flash.utils.setTimeout;
+			
 			import app.Game;
 			import app.config.AppConfig;
 			import app.constant.MainConstant;
 			import app.manager.ModelManager;
 			import app.update.AppUpdater;
 			
-			import com.hmh.utils.FileHelper;
-			
 			import deltax.common.Util;
 			import deltax.common.control.EventHandler;
 			import deltax.common.log.LogEvent;
 			import deltax.common.resource.Enviroment;
 			import deltax.gui.component.event.DXWndMouseEvent;
-			
-			import flash.utils.clearTimeout;
-			import flash.utils.setTimeout;
-			
-			import mx.core.UIComponent;
-			import mx.events.IndexChangedEvent;
-			import mx.events.ResizeEvent;
 			
 			private var delayId:uint;
 			private var nudeIdTIs:Array;
@@ -184,7 +180,7 @@
 		
 		<mx:VDividedBox id="h1" width="70%" height="100%" verticalGap="2">
 			<s:BorderContainer id="viewContainer" x="0" y="0" width="100%" height="100%" minWidth="300" minHeight="300"/>
-			<s:BorderContainer width="100%" height="300">
+			<s:BorderContainer width="100%" height="300" backgroundAlpha="0">
 				<view:ModelTimelineView id="modelTimelineVIew" width="100%" height="100%"/>
 			</s:BorderContainer>
 		</mx:VDividedBox>
