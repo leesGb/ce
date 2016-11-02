@@ -12,9 +12,12 @@
 	<fx:Script>
 		<![CDATA[
 			import com.hmh.utils.FileHelper;
+			import com.hmh.utils.FpsUtil;
 			
 			import flash.utils.clearTimeout;
 			import flash.utils.setTimeout;
+			
+			import mx.core.UIComponent;
 			
 			import app.Game;
 			import app.config.AppConfig;
@@ -129,6 +132,18 @@
 //				viewContainer.addElement(ui);
 				
 				ModelManager.getInstance().importCoordAms();
+				
+				showFpsInfo();
+			}
+			
+			private function showFpsInfo():void
+			{
+				var fpsInfo:FpsUtil = new FpsUtil();
+				fpsInfo.alpha = 0.6;
+				fpsInfo.y = 350;
+				var ui:UIComponent = new UIComponent();
+				ui.addChild(fpsInfo);
+				viewContainer.addElement(ui);
 			}
 			
 			private function processEvent(e:Event):void
@@ -179,7 +194,7 @@
 	<mx:DividedBox width="100%" height="100%" direction="horizontal" horizontalGap="2">
 		
 		<mx:VDividedBox id="h1" width="70%" height="100%" verticalGap="2">
-			<s:BorderContainer id="viewContainer" x="0" y="0" width="100%" height="100%" minWidth="300" minHeight="300"/>
+			<s:BorderContainer id="viewContainer" x="0" y="0" width="100%" height="100%" minWidth="300" minHeight="300" backgroundAlpha="0"/>
 			<s:BorderContainer width="100%" height="300" backgroundAlpha="0">
 				<view:ModelTimelineView id="modelTimelineVIew" width="100%" height="100%"/>
 			</s:BorderContainer>
@@ -215,6 +230,9 @@
 							</s:NavigatorContent>
 							<s:NavigatorContent width="100%" height="100%" label="格式转换">
 								<view:AllFormatTransfer id="contentFormatInfoView" width="100%" height="100%"/>
+							</s:NavigatorContent>
+							<s:NavigatorContent width="100%" height="100%" label="性能测试">
+								<view:TestPerformance id="testPerformanceView" width="100%" height="100%"/>
 							</s:NavigatorContent>
 						</mx:TabNavigator>
 						
