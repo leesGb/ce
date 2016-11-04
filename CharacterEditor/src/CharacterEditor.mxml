@@ -11,25 +11,27 @@
 	</fx:Declarations>
 	<fx:Script>
 		<![CDATA[
-			import com.hmh.utils.FileHelper;
-			import com.hmh.utils.FpsUtil;
-			
-			import flash.utils.clearTimeout;
-			import flash.utils.setTimeout;
-			
-			import mx.core.UIComponent;
-			
 			import app.Game;
 			import app.config.AppConfig;
 			import app.constant.MainConstant;
 			import app.manager.ModelManager;
 			import app.update.AppUpdater;
 			
+			import com.hmh.utils.FileHelper;
+			import com.hmh.utils.FpsUtil;
+			
 			import deltax.common.Util;
 			import deltax.common.control.EventHandler;
 			import deltax.common.log.LogEvent;
 			import deltax.common.resource.Enviroment;
 			import deltax.gui.component.event.DXWndMouseEvent;
+			
+			import flash.net.dns.AAAARecord;
+			import flash.utils.clearTimeout;
+			import flash.utils.setTimeout;
+			
+			import mx.core.UIComponent;
+			import mx.events.DragEvent;
 			
 			private var delayId:uint;
 			private var nudeIdTIs:Array;
@@ -189,12 +191,36 @@
 //				}
 //			}
 			
+			protected function viewContainer_dragEnterHandler(event:DragEvent):void
+			{
+				// TODO Auto-generated method stub
+				var f:File = event.dragSource.dataForFormat(event.dragSource.formats[0])[0] as File;
+				if(f && f.exists)
+				{
+					if(f.extension == "ams")
+					{
+						ModelManager.getInstance().importAmsMesh(f.nativePath);
+						
+						var ansPath:String = f.nativePath.replace("mod","ani").replace(".ams",".ans");
+						var ff:File = new File(ansPath);
+						if(ff.exists)
+						{
+							ModelManager.getInstance().importAniGroupHandler(ff);
+						}
+					}else if(f.extension == "md5mesh")
+					{
+						ModelManager.getInstance().importMd5Mesh(f);
+					}
+				}
+			}
+			
 		]]>
 	</fx:Script>
 	<mx:DividedBox width="100%" height="100%" direction="horizontal" horizontalGap="2">
 		
 		<mx:VDividedBox id="h1" width="70%" height="100%" verticalGap="2">
-			<s:BorderContainer id="viewContainer" x="0" y="0" width="100%" height="100%" minWidth="300" minHeight="300" backgroundAlpha="0"/>
+			<s:BorderContainer id="viewContainer" x="0" y="0" width="100%" height="100%" minWidth="300" minHeight="300" backgroundAlpha="0" mouseEnabled="true"
+							   dragEnter="viewContainer_dragEnterHandler(event)"/>
 			<s:BorderContainer width="100%" height="300" backgroundAlpha="0">
 				<view:ModelTimelineView id="modelTimelineVIew" width="100%" height="100%"/>
 			</s:BorderContainer>
