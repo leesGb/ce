@@ -8,27 +8,24 @@
 	</fx:Declarations>
 	<fx:Script>
 		<![CDATA[
-			import app.Game;
-			import app.constant.MainConstant;
-			import app.manager.ModelManager;
-			
-			import deltax.common.control.EventHandler;
-			import deltax.common.log.LogEvent;
-			import deltax.graphic.animation.EnhanceSkeletonAnimator;
-			import deltax.graphic.model.AniGroupLoadHandler;
-			import deltax.graphic.model.AniSequenceHeaderInfo;
-			import deltax.graphic.model.Animation;
-			import deltax.graphic.model.AnimationGroup;
-			import deltax.graphic.model.FrameString;
-			import deltax.graphic.scenegraph.object.ObjectContainer3D;
-			import deltax.graphic.scenegraph.object.RenderObject;
-			
 			import mx.collections.ArrayCollection;
 			import mx.core.UIComponent;
 			import mx.events.FlexEvent;
-			import mx.events.IndexChangedEvent;
 			
 			import spark.events.IndexChangeEvent;
+			
+			import controlEvents.EventHandler;
+			
+			import deltax.graphic.animation.EnhanceSkeletonAnimator;
+			import deltax.graphic.model.AniSequenceHeaderInfo;
+			import deltax.graphic.model.Animation;
+			import deltax.graphic.model.FrameString;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			
+			import events.LogerEvent;
+			
+			import manager.ModelManager;
+			
 			
 			public static var instance:ModelTimelineView;
 			
@@ -81,7 +78,7 @@
 				timeContent.addEventListener(MouseEvent.MOUSE_MOVE,mouseMoveHandler);
 				dragBtn.addEventListener(MouseEvent.MOUSE_UP,mouseUpHandler);
 				
-				EventHandler.instance.addEventListener(LogEvent.LOG_EVENT,this.logEvent);
+				EventHandler.instance.addEventListener(LogerEvent.LOG_EVENT,this.logEvent);
 			}
 			
 			protected function mouseDownHandler(event:MouseEvent):void
@@ -297,23 +294,23 @@
 				}
 			}
 			
-			private function logEvent(evt:LogEvent) : void
+			private function logEvent(evt:LogerEvent) : void
 			{
 				tabID.selectedIndex = 1;
 				var va:* = getTimer() + " : " + evt.text;
-				if(evt.level == LogEvent.ERROR)
+				if(evt.level == LogerEvent.ERROR)
 				{
 					va = "<font color=\"#ff8080\">" + va + "</font>";
 				}
-				else if(evt.level == LogEvent.INFO)
+				else if(evt.level == LogerEvent.INFO)
 				{
 					va = "<font color=\"#707070\">" + va + "</font>";
 				}
-				else if(evt.level == LogEvent.WARNING)
+				else if(evt.level == LogerEvent.WARNING)
 				{
 					va = "<font color=\"#907020\">" + va + "</font>";
 				}
-				else if(evt.level == LogEvent.MESSAGE)
+				else if(evt.level == LogerEvent.MESSAGE)
 				{
 					va = "<font color=\"#409040\">" + va + "</font>";
 				}

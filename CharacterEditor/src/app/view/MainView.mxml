@@ -10,10 +10,12 @@
 	</s:layout>
 	<fx:Script>
 		<![CDATA[
-			import com.hmh.SkeletonPreview;
-			import app.manager.ModelManager;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
 			
-			import deltax.*;
 			import deltax.common.DictionaryUtil;
 			import deltax.common.Util;
 			import deltax.graphic.model.AniSequenceHeaderInfo;
@@ -25,11 +27,9 @@
 			import deltax.graphic.scenegraph.object.RenderObject;
 			import deltax.graphic.scenegraph.object.SubGeometry;
 			
-			import mx.collections.ArrayCollection;
-			import mx.controls.Alert;
-			import mx.events.CloseEvent;
-			import mx.events.FlexEvent;
-			import mx.managers.PopUpManager;
+			import manager.ModelManager;
+			
+			
 			
 			private var curRenderObject:RenderObject;
 			protected function group1_creationCompleteHandler(event:FlexEvent):void

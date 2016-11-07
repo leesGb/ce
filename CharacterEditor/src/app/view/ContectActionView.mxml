@@ -5,19 +5,23 @@
 	
 	<fx:Script>
 		<![CDATA[
-			import app.manager.ModelManager;
-			
-			import deltax.common.resource.Enviroment;
-			import deltax.graphic.model.AniSequenceHeaderInfo;
-			import deltax.graphic.model.AnimationGroup;
-			import deltax.graphic.scenegraph.object.RenderObject;
-			
 			import flash.utils.setTimeout;
 			
 			import mx.collections.ArrayCollection;
 			import mx.events.FlexEvent;
 			
 			import spark.events.IndexChangeEvent;
+			
+			import deltax.common.resource.Enviroment;
+			import deltax.graphic.model.AniSequenceHeaderInfo;
+			import deltax.graphic.model.AnimationGroup;
+			import deltax.graphic.scenegraph.object.RenderObject;
+			
+			import manager.ModelManager;
+			
+			
+			
+			
 			
 			private var curRenderObject:RenderObject;
 			

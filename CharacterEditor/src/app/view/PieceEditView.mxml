@@ -7,10 +7,14 @@
 	</fx:Declarations>
 	<fx:Script>
 		<![CDATA[
-			import app.manager.ModelManager;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
 			
-			import deltax.common.resource.Enviroment;
+			import spark.components.RadioButtonGroup;
+			import spark.events.TextOperationEvent;
+			
 			import deltax.delta;
+			import deltax.common.resource.Enviroment;
 			import deltax.graphic.material.SkinnedMeshMaterial;
 			import deltax.graphic.model.HPieceGroup;
 			import deltax.graphic.model.Piece;
@@ -18,11 +22,10 @@
 			import deltax.graphic.model.PieceMaterialInfo;
 			import deltax.graphic.scenegraph.object.SubMesh;
 			
-			import mx.events.CloseEvent;
-			import mx.managers.PopUpManager;
+			import manager.ModelManager;
 			
-			import spark.components.RadioButtonGroup;
-			import spark.events.TextOperationEvent;
+			
+			
 			
 			private var _info:Piece;
 			private var cells:Vector.<MaterialPropertiesView>;

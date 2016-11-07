@@ -4,7 +4,7 @@
 		 xmlns:mx="library://ns.adobe.com/flex/mx" width="606" height="360" creationComplete="group1_creationCompleteHandler(event)">
 	<fx:Script>
 		<![CDATA[
-			import app.manager.ModelManager;
+			import mx.events.FlexEvent;
 			
 			import deltax.common.resource.Enviroment;
 			import deltax.graphic.manager.IResource;
@@ -13,7 +13,9 @@
 			import deltax.graphic.model.AnimationGroup;
 			import deltax.graphic.model.Socket;
 			
-			import mx.events.FlexEvent;
+			import manager.ModelManager;
+			
+			
 			
 			private var fileList:Array = []; 
 			

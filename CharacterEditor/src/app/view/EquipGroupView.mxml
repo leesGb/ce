@@ -7,17 +7,12 @@
 	</fx:Declarations>
 	<fx:Script>
 		<![CDATA[
-			import app.constant.MainConstant;
-			import app.equipment.DressingRoom;
-			import app.equipment.EquipItemParam;
-			import app.equipment.EquipParams;
-			import app.equipment.Equipment;
-			import app.equipment.EquipmentGroup;
-			import app.equipment.EquipmentPart;
-			import app.equipment.EquipsInUse;
-			import app.manager.ModelManager;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
 			
-			import com.hmh.utils.FileHelper;
+			import app.constant.MainConstant;
 			
 			import deltax.common.resource.DependentRes;
 			import deltax.common.resource.Enviroment;
@@ -25,13 +20,21 @@
 			import deltax.graphic.effect.data.EffectGroup;
 			import deltax.graphic.manager.ResourceManager;
 			import deltax.graphic.manager.ResourceType;
-			import deltax.graphic.map.MapConstants;
 			
-			import mx.collections.ArrayCollection;
-			import mx.controls.Alert;
-			import mx.events.CloseEvent;
-			import mx.events.FlexEvent;
-			import mx.managers.PopUpManager;
+			import equipments.DressingRoom;
+			import equipments.EquipItemParam;
+			import equipments.EquipParams;
+			import equipments.Equipment;
+			import equipments.EquipmentGroup;
+			import equipments.EquipmentPart;
+			import equipments.EquipsInUse;
+			
+			import manager.ModelManager;
+			
+			import utils.FileHelper;
+			
+			
+			
 			
 			private var m_equipGroups:Vector.<EquipmentGroup>;
 			private var loadedCnt:int;

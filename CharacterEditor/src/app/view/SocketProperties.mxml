@@ -8,22 +8,25 @@
 	</fx:Declarations>
 	<fx:Script>
 		<![CDATA[
-			import app.manager.ModelManager;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
 			
 			import deltax.common.math.Quaternion;
 			import deltax.graphic.model.Socket;
 			import deltax.graphic.scenegraph.object.RenderObjLinkType;
 			import deltax.graphic.scenegraph.object.RenderObject;
 			
-			import mx.events.CloseEvent;
-			import mx.events.FlexEvent;
-			import mx.managers.PopUpManager;
+			import equipments.DressingRoom;
+			import equipments.EquipClassType;
+			import equipments.EquipItemInUse;
+			import equipments.Equipment;
+			import equipments.EquipmentGroup;
 			
-			import app.equipment.DressingRoom;
-			import app.equipment.EquipClassType;
-			import app.equipment.EquipItemInUse;
-			import app.equipment.Equipment;
-			import app.equipment.EquipmentGroup;
+			import manager.ModelManager;
+			
+			
+			
 			private var _info:deltax.graphic.model.Socket;
 			
 			public function set socketInfo(value:deltax.graphic.model.Socket):void{

@@ -7,10 +7,12 @@
 		<![CDATA[
 			import app.constant.MainConstant;
 			
-			import app.manager.ModelManager;
-			
 			import deltax.common.resource.Enviroment;
 			import deltax.graphic.model.PieceGroup;
+			
+			import manager.ModelManager;
+			
+			
 			protected function importMesh_clickHandler(event:MouseEvent):void
 			{
 				var file:File = new File(Enviroment.RootPath+"md5/");

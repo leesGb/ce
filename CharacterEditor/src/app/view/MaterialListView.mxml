@@ -5,12 +5,17 @@
 		 width="610" initialize="titlewindow1_initializeHandler(event)">
 	<fx:Script>
 		<![CDATA[
+			import flash.display3D.Context3DBlendFactor;
+			import flash.utils.setTimeout;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.RadioButtonGroup;
+			
 			import app.constant.MainConstant;
 			
-			import app.manager.ModelManager;
-			import com.hmh.utils.FileHelper;
-			
-			import deltax.appframe.BaseApplication;
 			import deltax.common.resource.Enviroment;
 			import deltax.graphic.manager.IResource;
 			import deltax.graphic.manager.ResourceManager;
@@ -20,17 +25,14 @@
 			import deltax.graphic.scenegraph.object.RenderObject;
 			import deltax.graphic.scenegraph.object.SubMesh;
 			
-			import flash.display3D.Context3DBlendFactor;
-			import flash.display3D.Context3DTriangleFace;
-			import flash.utils.setTimeout;
+			import manager.ModelManager;
 			
-			import mx.collections.ArrayCollection;
-			import mx.events.CloseEvent;
-			import mx.events.FlexEvent;
-			import mx.managers.PopUpManager;
+			import utils.FileHelper;
 			
-			import spark.components.RadioButtonGroup;
-			import spark.events.TextOperationEvent;
+			
+			
+			
+			
 			
 			private var fileList:Array;
 			private var curFile:File;

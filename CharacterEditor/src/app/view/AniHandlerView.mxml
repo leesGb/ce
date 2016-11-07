@@ -5,9 +5,10 @@
 	
 	<fx:Script>
 		<![CDATA[
-			import app.manager.ModelManager;
-			
 			import deltax.common.resource.Enviroment;
+			
+			import manager.ModelManager;
+			
 			protected function importAns_clickHandler(event:MouseEvent):void
 			{
 				var file:File = new File(Enviroment.ResourceRootPath);
