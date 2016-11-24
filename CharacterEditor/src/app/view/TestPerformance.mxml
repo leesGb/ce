@@ -4,44 +4,66 @@
 		 xmlns:mx="library://ns.adobe.com/flex/mx" width="462" height="300" creationComplete="group1_creationCompleteHandler(event)">
 	<fx:Script>
 		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.containers.Form;
+			import mx.events.FlexEvent;
+			
+			import spark.events.IndexChangeEvent;
+			
 			import deltax.appframe.BaseApplication;
 			import deltax.appframe.SceneGrid;
-			import deltax.common.math.MathUtl;
 			import deltax.common.resource.Enviroment;
+			import deltax.graphic.effect.data.EffectData;
+			import deltax.graphic.effect.data.EffectGroup;
+			import deltax.graphic.effect.render.Effect;
+			import deltax.graphic.manager.IResource;
+			import deltax.graphic.manager.ResourceManager;
+			import deltax.graphic.manager.ResourceType;
 			import deltax.graphic.map.MetaScene;
 			import deltax.graphic.scenegraph.object.ObjectContainer3D;
 			import deltax.graphic.scenegraph.object.RenderObject;
 			import deltax.graphic.scenegraph.object.RenderScene;
 			
-			import mx.collections.ArrayCollection;
-			import mx.events.FlexEvent;
+			import utils.FileHelper;
 			
-			private var aniArr:Array=["stand","run","attack","attack01","collect"];
-			private var numArr:Array=["2","5","10","20","30","50","100"];
-			private var levelArr:Array=["zs_000","zs_001","zs_010","zs_020","zs_030","zs_040","zs_050","zs_060","zs_070","zs_080","zs_090","zs_100","zs_999",
+			private var aniArr:Array=["null","stand","run","attack","attack01","collect"];
+			private var numArr:Array=["0","2","5","10","20","30","50","100"];
+			private var levelArr:Array=["null","zs_000","zs_001","zs_010","zs_020","zs_030","zs_040","zs_050","zs_060","zs_070","zs_080","zs_090","zs_100","zs_999",
 				"ms_000","ms_001","ms_010","ms_020","ms_030","ms_040","ms_050","ms_060","ms_070","ms_080","ms_090","ms_100","ms_999",
 				"fs_000","fs_001","fs_010","fs_020","fs_030","fs_040","fs_050","fs_060","fs_070","fs_080","fs_090","fs_100","fs_999"];
 			
+			private var eftTypeArr:Array =["null","asew","equip","gui","map/local","role","skill"];
+			private var eftIDArr:Array=[];
+			private var eftChildArr:Array=[];
+			
 			private var _objList:Vector.<RenderObject>;
+			private var _eftList:Vector.<Effect>;
 			
 			private var _renderScene:RenderScene;
 			
-			private var startPos:Vector3D = new Vector3D();
+			private var startPos:Vector3D = new Vector3D(12992,0,11392);
 			private var posIdx:uint = 0;
+			private var posIdx2:uint = 0;
+			
+			private var _eGroup:EffectGroup;
 			
 			protected function group1_creationCompleteHandler(event:FlexEvent):void
 			{
 				level_com.dataProvider = new ArrayCollection(levelArr);
 				num_com.dataProvider = new ArrayCollection(numArr);
 				ani_com.dataProvider = new ArrayCollection(aniArr);
+				eft_type_com.dataProvider = new ArrayCollection(eftTypeArr);
+				
 				_objList = new Vector.<RenderObject>();
+				_eftList = new Vector.<Effect>();
 			}
 			
-			protected function btn_add_clickHandler(event:MouseEvent):void
+			protected function btn_add_model_clickHandler(event:MouseEvent):void
 			{
 				if(_renderScene == null)
 				{
-					_renderScene = BaseApplication.instance.createRenderScene(999999, new SceneGrid(20, 20), sceneCreateHandler);
+//					_renderScene = BaseApplication.instance.createRenderScene(999999, new SceneGrid(20, 20), sceneCreateHandler);
+					_renderScene = BaseApplication.instance.sceneManager.createRenderSceneByName(Enviroment.ResourceRootPath+"map/yueguangzhaoze/yueguangzhaoze.map",sceneCreateHandler);
 				}else
 				{
 					createObjs();	
@@ -53,11 +75,14 @@
 				if (isSuccess)
 				{
 					var lookAtrenderObject:ObjectContainer3D = new ObjectContainer3D();
+					startPos.y = _renderScene.metaScene.getGridLogicHeightByPixel(startPos.x,startPos.z);		
 					lookAtrenderObject.position = startPos;
 					BaseApplication.instance.camController.lookAtTarget = lookAtrenderObject;
 					BaseApplication.instance.camController.setCameraDistToTarget(1000);
 					//
 					createObjs();
+					//
+					createEfts();	
 				}
 			}
 			
@@ -71,8 +96,11 @@
 				{
 					var obj:RenderObject = new RenderObject();
 					obj.addMesh(Enviroment.ResourceRootPath+"role/mod/"+String(level_com.selectedItem)+".ams");
-					obj.setAniGroupByName(Enviroment.ResourceRootPath+"role/ani/"+String(level_com.selectedItem)+".ans");
-					obj.playAni(String(ani_com.selectedItem));
+					if(String(ani_com.selectedItem) != "null")
+					{
+						obj.setAniGroupByName(Enviroment.ResourceRootPath+"role/ani/"+String(level_com.selectedItem)+".ans");
+						obj.playAni(String(ani_com.selectedItem));
+					}
 					xx = (posIdx%10)*150;
 					zz = uint(posIdx/10)*150;
 					pos.setTo(xx,0,zz);
@@ -83,7 +111,7 @@
 				}
 			}
 			
-			protected function brn_clear_clickHandler(event:MouseEvent):void
+			protected function btn_clear_model_clickHandler(event:MouseEvent):void
 			{
 				if(!_renderScene || !_renderScene.loaded)
 				{
@@ -101,17 +129,117 @@
 				_objList.length = 0;
 			}
 			
+			private function btn_add_eft_clickHandler(evt:MouseEvent):void
+			{
+				if(_renderScene == null)
+				{
+					_renderScene = BaseApplication.instance.createRenderScene(999999, new SceneGrid(20, 20), sceneCreateHandler);
+				}else
+				{
+					createEfts();	
+				}
+			}
+			
+			private function createEfts():void
+			{
+				if(_eGroup == null)return;
+				if(eft_child_com.selectedItem == "null")return;
+				
+				var eft:Effect = _eGroup.createEffect(String(eft_child_com.selectedItem));
+				if(eft)
+				{
+					var pos:Vector3D = new Vector3D();
+					var xx:uint = 0;
+					var zz:uint = 0;
+					xx = (posIdx2%5)*500;
+					zz = uint(posIdx2/5)*500;
+					pos.setTo(xx,0,zz);
+					eft.position = pos;
+					_renderScene.addChild(eft);
+					posIdx2 ++;
+					_eftList.push(eft);
+				}
+			}
+			
+			private function btn_clear_eft_clickHandler(evt:MouseEvent):void
+			{
+				if(!_renderScene || !_renderScene.loaded)
+				{
+					_eftList.length = 0;
+					return;
+				}
+				
+				var eft:Effect;
+				for each(eft in _eftList)
+				{
+					_renderScene.removeChild(eft);
+					eft.release();
+				}
+				
+				_eftList.length = 0;
+			}
+			
+			protected function eft_type_com_changeHandler(event:IndexChangeEvent):void
+			{
+				eftIDArr.length = 0;
+				
+				if(eft_type_com.selectedItem == "null")
+				{
+					eftIDArr.unshift("null");
+					eft_ID_com.dataProvider = new ArrayCollection(eftIDArr);
+				}else
+				{
+					eftIDArr = FileHelper.getUnderPathChilds(Enviroment.ResourceRootPath+"fx/cfg/"+String(eft_type_com.selectedItem),"eft");
+					eftIDArr.unshift("null");
+					eft_ID_com.dataProvider = new ArrayCollection(eftIDArr);
+				}
+			}
+			
+			protected function eft_ID_com_changeHandler(event:IndexChangeEvent):void
+			{
+				if(eft_ID_com.selectedItem == null)return;
+				var path:String = File(eft_ID_com.selectedItem.data).nativePath;
+				_eGroup = ResourceManager.instance.getResource(path,ResourceType.EFFECT_GROUP,loadCompleted,EffectGroup) as EffectGroup;
+			}
+			
+			private function loadCompleted(res:IResource,isSuccess:Boolean):void
+			{
+				eftChildArr=[];
+				if(isSuccess)
+				{
+					var eGroup:EffectGroup = res as EffectGroup;
+					for each(var eData:EffectData in eGroup.m_effectDatas)
+					{
+						eftChildArr.push(eData.fullName);
+					}
+				}
+				
+				eft_child_com.dataProvider = new ArrayCollection(eftChildArr);
+			}
+			
 		]]>
 	</fx:Script>
 	<fx:Declarations>
 		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
 	</fx:Declarations>
-	<s:ComboBox id="level_com" x="70" y="34"/>
-	<s:ComboBox id="num_com" x="70" y="69"/>
-	<s:ComboBox id="ani_com" x="70" y="104"/>
-	<s:Label x="18" y="111" text="播放动作"/>
-	<s:Label x="18" y="76" text="装备数量"/>
+	
 	<s:Label x="18" y="41" text="装备等级"/>
-	<s:Button id="btn_add" x="18" y="147" width="198" height="25" label="添加" click="btn_add_clickHandler(event)"/>
-	<s:Button id="brn_clear" x="18" y="187" width="198" height="25" label="清除全部" click="brn_clear_clickHandler(event)"/>
+	<s:ComboBox id="level_com" x="70" y="34"/>
+	<s:Label x="18" y="76" text="装备数量"/>
+	<s:ComboBox id="num_com" x="70" y="69"/>
+	<s:Label x="18" y="111" text="播放动作"/>
+	<s:ComboBox id="ani_com" x="70" y="104"/>
+	
+	<s:Button id="btn_add_model" x="18" y="147" width="198" height="25" label="添加装备" click="btn_add_model_clickHandler(event)"/>
+	<s:Button id="btn_clear_model" x="18" y="187" width="198" height="25" label="清除全部装备" click="btn_clear_model_clickHandler(event)"/>
+	
+	<s:Label x="290" y="41" text="特效类型"/>
+	<s:ComboBox id="eft_type_com" x="350" y="34" change="eft_type_com_changeHandler(event)"/>
+	<s:Label x="290" y="76" text="特效id"/>
+	<s:ComboBox id="eft_ID_com" x="350" y="69" labelField="name" change="eft_ID_com_changeHandler(event)"/>
+	<s:Label x="290" y="111" text="子特效"/>
+	<s:ComboBox id="eft_child_com" x="350" y="104"/>
+	
+	<s:Button id="btn_add_eft" x="290" y="147" width="198" height="25" label="添加特效" click="btn_add_eft_clickHandler(event)"/>
+	<s:Button id="btn_clear_eft" x="290" y="187" width="198" height="25" label="清除全部特效" click="btn_clear_eft_clickHandler(event)"/>
 </s:Group>

@@ -41,6 +41,7 @@
 			protected function button1_clickHandler(event:MouseEvent):void
 			{
 				if(curRenderObject == null)return;
+				
 				playTime = 0;
 				actionArr.length=0;
 				timeArr.length = 0;
