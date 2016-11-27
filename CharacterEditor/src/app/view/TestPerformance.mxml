@@ -5,7 +5,6 @@
 	<fx:Script>
 		<![CDATA[
 			import mx.collections.ArrayCollection;
-			import mx.containers.Form;
 			import mx.events.FlexEvent;
 			
 			import spark.events.IndexChangeEvent;
@@ -41,7 +40,7 @@
 			
 			private var _renderScene:RenderScene;
 			
-			private var startPos:Vector3D = new Vector3D(12992,0,11392);
+			private var startPos:Vector3D = new Vector3D(0,0,0);
 			private var posIdx:uint = 0;
 			private var posIdx2:uint = 0;
 			
@@ -62,8 +61,8 @@
 			{
 				if(_renderScene == null)
 				{
-//					_renderScene = BaseApplication.instance.createRenderScene(999999, new SceneGrid(20, 20), sceneCreateHandler);
-					_renderScene = BaseApplication.instance.sceneManager.createRenderSceneByName(Enviroment.ResourceRootPath+"map/yueguangzhaoze/yueguangzhaoze.map",sceneCreateHandler);
+					_renderScene = BaseApplication.instance.createRenderScene(999999, new SceneGrid(20, 20), sceneCreateHandler);
+//					_renderScene = BaseApplication.instance.sceneManager.createRenderSceneByName(Enviroment.ResourceRootPath+"map/yueguangzhaoze/yueguangzhaoze.map",sceneCreateHandler);
 				}else
 				{
 					createObjs();	
@@ -75,7 +74,7 @@
 				if (isSuccess)
 				{
 					var lookAtrenderObject:ObjectContainer3D = new ObjectContainer3D();
-					startPos.y = _renderScene.metaScene.getGridLogicHeightByPixel(startPos.x,startPos.z);		
+					startPos.y = 0;//_renderScene.metaScene.getGridLogicHeightByPixel(startPos.x,startPos.z);		
 					lookAtrenderObject.position = startPos;
 					BaseApplication.instance.camController.lookAtTarget = lookAtrenderObject;
 					BaseApplication.instance.camController.setCameraDistToTarget(1000);
