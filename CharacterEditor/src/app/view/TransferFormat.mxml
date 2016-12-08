@@ -1,16 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
 		 xmlns:s="library://ns.adobe.com/flex/spark" 
-		 xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300">
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300" creationComplete="group1_creationCompleteHandler(event)">
 	
 	<fx:Script>
 		<![CDATA[
+			import mx.events.FlexEvent;
+			
 			import app.constant.MainConstant;
 			
+			import deltax.common.control.EventHandler;
+			import deltax.common.control.EventVO;
 			import deltax.common.resource.Enviroment;
+			import deltax.graphic.manager.IResource;
+			import deltax.graphic.manager.ResourceManager;
+			import deltax.graphic.manager.ResourceType;
+			import deltax.graphic.model.AnimationGroup;
 			import deltax.graphic.model.PieceGroup;
 			
 			import manager.ModelManager;
+			
+			import utils.FileHelper;
 			
 			
 			protected function importMesh_clickHandler(event:MouseEvent):void
@@ -60,6 +70,112 @@
 				ModelManager.getInstance().exportModelSkeletonFromMd5(MainConstant.mainView.pieceGroupDg.selectedItem as PieceGroup);
 			}
 			
+			private var _transArr:Array=[];
+			protected function formatTrans_clickHandler(event:MouseEvent):void
+			{
+				FileHelper.getUnderPathChilds("E:/project/flash/game/nginx/html/MTArts/assets/data","ans",_transArr);
+				trace("totalCount>>>>>>>>>>>>>>>>>>>>>>>>>"+_transArr.length);
+				loadAns();
+			}
+			
+			private function loadAns():void
+			{
+				var obj:Object = _transArr.shift();
+				if(obj)
+				{
+					var path:String = File(obj.data).nativePath;
+					
+					ResourceManager.instance.getResource(path,ResourceType.ANI_GROUP,onComplete,AnimationGroup) as AnimationGroup;	
+					trace("loadFile>>>>>>>>>>>>>>>>>>>>>>>>>","path::"+path,"restAnsCount::"+_transArr.length);
+				}else
+				{
+					if(_transArr.length == 0)
+					{
+						exportConfig();
+					}else
+					{
+						trace("=====================error");
+					}
+				}
+			}
+			
+			private function onComplete(res:IResource,isSuccess:Boolean):void
+			{
+				if(isSuccess)
+				{
+					var ans:AnimationGroup = res as AnimationGroup;
+					ans.preLoadAllAni();
+					trace("ansContainAniCount>>>>>>>>>>>>>>>>>>>>>>>>>",ans.animationCount);
+				}
+			}
+			
+			private var changeFile:File;
+			private var dic:Dictionary=new Dictionary();
+			protected function group1_creationCompleteHandler(event:FlexEvent):void
+			{
+				// TODO Auto-generated method stub
+				EventHandler.addMsg("allAniLoaded",allLoaded);
+				EventHandler.addMsg("saveOneAni",saveAin);
+				changeFile = new File("E:/project/flash/game/nginx/html/MTArts/assets/data/transformat.xml");
+				if(changeFile.exists)
+				{
+					var rootXml:XML = new XML(FileHelper.readFileToStr(changeFile));
+					var obj:Object;
+					for each(var xmlList:XML in rootXml.children())
+					{
+						obj = {};
+						dic[String(xmlList.@name)] = obj;
+						obj.child = [];
+						for each(var xml:XML in xmlList.ani)
+						{
+							var child:Object={};
+							obj.child.push(child);
+							child["name"] = String(xml.@name);	
+						}
+					}
+				}else
+				{
+					changeFile = new File("E:/project/flash/game/nginx/html/MTArts/assets/data/").resolvePath(changeFile.name);
+					var fs:FileStream = new FileStream();
+					fs.open(changeFile, FileMode.WRITE);
+					fs.writeMultiByte("","utf8");
+					fs.close();
+				}
+			}
+			
+			private function exportConfig():void
+			{
+				var str:String = "<root>\n";
+				var obj:Object;
+				for(var fileName:String in dic)
+				{
+					obj = dic[fileName];
+					str+="		<ans name="+fileName +" child="+obj["child"].length+">\n";
+					for each(var m:Object in obj["child"])
+					{
+						str+="				<ani name="+m["name"]+"/>\n";
+					}
+					str+= "		</ans>\n";
+				}
+				str += "</root>";
+				FileHelper.saveStringToFile(str,changeFile);
+			}
+			
+			private function allLoaded(evt:EventVO):void
+			{
+				loadAns();
+			}
+			
+			private function saveAin(evt:EventVO):void
+			{
+				var arr:Array = evt.data as Array;
+				var path:String = arr[0];
+				var data:ByteArray = arr[1];
+				FileHelper.saveByteArrayToFile(data,path);
+				
+				trace("saveFile>>>>>>>>>>>>>>>>>>>>>>>>>"+path);
+			}
+			
 		]]>
 	</fx:Script>
 	
@@ -68,8 +184,10 @@
 	</fx:Declarations>
 	<s:Button id="importMesh" x="6" y="35" width="100" height="35" label="导入mesh" toolTip="导入美术打包好的md5mesh文件"
 			  click="importMesh_clickHandler(event)"/>
-	<s:Button id="exportAmsAndAns" x="6" y="87" width="225" height="35" label="导出ams@ans" toolTip="导出程序用的模型数据与骨骼动画包，这里的骨骼包是包括所有的动画"
-			  click="exportAmsAndAns_clickHandler(event)"/>
 	<s:Button id="transferAni" x="131" y="35" width="100" height="35" label="转换动作" toolTip="导入美术打包好的md5anim文件，就可以转换成程序用的ani格式"
 			  click="transferAni_clickHandler(event)"/>
+	<s:Button id="exportAmsAndAns" x="6" y="87" width="225" height="35" label="导出ams@ans" toolTip="导出程序用的模型数据与骨骼动画包，这里的骨骼包是包括所有的动画"
+			  click="exportAmsAndAns_clickHandler(event)"/>
+	<s:Button id="formatTrans" x="6" y="130" width="225" height="35" label="格式转换" toolTip=""
+			  click="formatTrans_clickHandler(event)"/>
 </s:Group>
