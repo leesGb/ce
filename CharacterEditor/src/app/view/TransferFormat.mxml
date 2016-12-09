@@ -91,6 +91,7 @@
 				{
 					if(_transArr.length == 0)
 					{
+						trace("=====================export config==========================");
 						exportConfig();
 					}else
 					{
@@ -104,6 +105,12 @@
 				if(isSuccess)
 				{
 					var ans:AnimationGroup = res as AnimationGroup;
+					if(ans.m_dependantResList[0].FileCount == 0)
+					{
+						trace("eroor ans file+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++",res.name);
+						loadAns();
+						return;
+					}
 					ans.preLoadAllAni();
 					trace("ansContainAniCount>>>>>>>>>>>>>>>>>>>>>>>>>",ans.animationCount);
 				}
