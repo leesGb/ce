@@ -73,7 +73,7 @@
 			private var _transArr:Array=[];
 			protected function formatTrans_clickHandler(event:MouseEvent):void
 			{
-				FileHelper.getUnderPathChilds("E:/project/flash/game/nginx/html/MTArts/assets/data","ans",_transArr);
+				FileHelper.getUnderPathChilds("E:/project/flash/MTArt/assets/data","ans",_transArr);
 				trace("totalCount>>>>>>>>>>>>>>>>>>>>>>>>>"+_transArr.length);
 				loadAns();
 			}
